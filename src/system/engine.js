@@ -25,6 +25,10 @@ async function main() {
   const exportOnly = hasFlag('--export-only');
   const apiOnly = hasFlag('--api-only');
   const uiOnly = hasFlag('--ui-only');
+  const planOnly = hasFlag('--plan-only');
+  const selectOpt = hasFlag('--select');
+  const selectionVal = process.argv.indexOf('--selection') > -1 ? process.argv[process.argv.indexOf('--selection') + 1] : null;
+  const downloadSelected = hasFlag('--download-selected');
 
   const status = await runPreflight(config);
 
@@ -39,6 +43,10 @@ async function main() {
   if (exportOnly) crawlArgs.push('--export-only');
   if (apiOnly) crawlArgs.push('--api-only');
   if (uiOnly) crawlArgs.push('--ui-only');
+  if (planOnly) crawlArgs.push('--plan-only');
+  if (selectOpt) crawlArgs.push('--select');
+  if (selectionVal) { crawlArgs.push('--selection'); crawlArgs.push(selectionVal); }
+  if (downloadSelected) crawlArgs.push('--download-selected');
 
   await runNodeScript('src/crawler/run.js', crawlArgs);
   console.log('\nArchive engine finished.');

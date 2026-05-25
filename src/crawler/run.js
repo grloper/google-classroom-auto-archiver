@@ -1,3 +1,4 @@
+import fs from 'fs-extra';
 import { config, summarizeConfig } from '../config.js';
 import { ensureProjectFolders } from '../utils/paths.js';
 import { createLogger } from '../utils/logger.js';
@@ -6,7 +7,7 @@ import { getGoogleClients } from '../auth/googleApi.js';
 import { crawlViaApi, persistCrawlResult } from './apiCrawler.js';
 import { crawlViaUi } from './uiCrawler.js';
 import { downloadAllAttachments } from '../downloaders/downloadManager.js';
-import { exportArchive } from '../storage/exporter.js';
+import { exportArchive, exportDownloadPlan } from '../storage/exporter.js';
 import { hasFlag } from '../utils/args.js';
 
 function printHelp() {
@@ -17,11 +18,15 @@ Usage:
   node src/crawler/run.js [options]
 
 Options:
-  --no-download   Crawl and export metadata without downloading attachments
-  --export-only   Regenerate JSON from the current SQLite database
-  --api-only      Disable Playwright UI fallback
-  --ui-only       Disable API mode and use conservative UI course discovery
-  --help          Show this help
+  --no-download       Crawl and export metadata without downloading attachments
+  --export-only       Regenerate JSON from the current SQLite database
+  --api-only          Disable Playwright UI fallback
+  --ui-only           Disable API mode and use conservative UI course discovery
+  --plan-only         Crawl metadata, enrich Drive metadata, write plan, do not download
+  --select            Run plan generation if needed, then start local UI
+  --selection <path>  Use a specific selection manifest
+  --download-selected Download only selected items from the manifest
+  --help              Show this help
 `);
 }
 
@@ -72,14 +77,42 @@ async function main() {
     let drive = null;
     let source = 'database';
 
-    if (!hasFlag('--export-only')) {
+    if (!hasFlag('--export-only') && !hasFlag('--download-selected')) {
       const crawl = await runCrawl({ db, logger });
       drive = crawl.drive;
       source = crawl.source;
       logger.info(`Persisted crawl results from ${source}; counts: ${JSON.stringify(db.getCounts())}`);
     }
 
-    if (!hasFlag('--no-download') && !hasFlag('--export-only')) {
+    if (hasFlag('--plan-only')) {
+      const { planPath } = await exportDownloadPlan(db, config);
+      logger.info(`Exported download plan to ${planPath}`);
+      return;
+    }
+
+    if (hasFlag('--select')) {
+      await exportDownloadPlan(db, config);
+      logger.info('Starting local UI for selection... (TODO: not fully implemented)');
+      // Need to start the API and open UI
+      return;
+    }
+
+    if (hasFlag('--download-selected')) {
+      const selectionPathIdx = process.argv.indexOf('--selection');
+      let selection = null;
+      if (selectionPathIdx > -1 && selectionPathIdx + 1 < process.argv.length) {
+        const selectionPath = process.argv[selectionPathIdx + 1];
+        selection = fs.readJsonSync(selectionPath);
+        db.saveDownloadSelection(selection);
+      } else {
+        selection = db.getDownloadSelection();
+      }
+      if (!drive) {
+        const clients = await getGoogleClients({ config, interactive: true });
+        drive = clients.drive;
+      }
+      await downloadAllAttachments({ db, drive, logger, activeConfig: config, selection });
+    } else if (!hasFlag('--no-download') && !hasFlag('--export-only')) {
       await downloadAllAttachments({ db, drive, logger, activeConfig: config });
     }
 

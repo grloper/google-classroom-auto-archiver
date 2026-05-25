@@ -9,6 +9,8 @@ npm run sanitize:check
 npm run compliance:check
 npm audit --audit-level=low
 npm run doctor
+node src/crawler/run.js --plan-only
+node src/crawler/run.js --no-download
 ```
 
 Confirm these paths are ignored and not staged:
@@ -20,6 +22,8 @@ Confirm these paths are ignored and not staged:
 - `database/*.db-*`
 - `logs/**`
 - `output/master_index.json`
+- `output/download_plan.json`
+- `output/download_selection.json`
 - `output/courses/**`
 
 Recommended release command:

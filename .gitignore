@@ -6,6 +6,8 @@ output/courses/**
 !output/courses/
 !output/courses/.gitkeep
 output/master_index.json
+output/download_plan.json
+output/download_selection.json
 
 sessions/**
 !sessions/

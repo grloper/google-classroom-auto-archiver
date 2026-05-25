@@ -18,6 +18,16 @@ API-first Google Classroom archival engine with Playwright session fallback. It 
 - Resumes interrupted runs and skips completed downloads.
 - Keeps credentials, tokens, logs, databases, browser sessions, and downloaded files local-only.
 
+## UI Dashboard
+
+The engine includes a rich, local-only web dashboard to interact with your downloaded content safely.
+
+![My Classroom View](docs/assets/classroom-view.png)
+*The "My Classroom" view elegantly visualizes downloaded courses, topics, materials, and assignments. Downloaded files can be opened natively directly from the UI.*
+
+![Database Reset Feature](docs/assets/settings-reset.png)
+*The system details tab provides an overview of the local database layout and includes a secure "Factory Reset" option for testing without losing downloaded disk files.*
+
 ## System Flow
 
 ```mermaid

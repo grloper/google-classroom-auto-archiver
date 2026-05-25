@@ -1,39 +1,207 @@
 import http from 'node:http';
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ArchiveDatabase } from '../storage/database.js';
 import { config } from '../config.js';
 import { ensureProjectFolders } from '../utils/paths.js';
 import { createLogger } from '../utils/logger.js';
+import { exportArchive, exportDownloadPlan } from '../storage/exporter.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+async function openBrowser(url) {
+  const { default: open } = await import('open');
+  await open(url);
+}
 
 function sendJson(response, statusCode, payload) {
   const body = JSON.stringify(payload, null, 2);
   response.writeHead(statusCode, {
     'content-type': 'application/json; charset=utf-8',
-    'access-control-allow-origin': '*'
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET, POST, PUT, OPTIONS'
   });
   response.end(body);
+}
+
+function runEngineDetached(args) {
+  if (process.platform === 'win32') {
+    // Open a visible CMD window so the user sees the download progress
+    const child = spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', process.execPath, 'src/system/engine.js', ...args], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    child.unref();
+  } else {
+    const child = spawn(process.execPath, ['src/system/engine.js', ...args], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    child.unref();
+  }
+}
+
+let activeDownloadProcess = null;
+
+async function jsonBody(request) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    request.on('data', chunk => body += chunk);
+    request.on('end', () => {
+      try { resolve(JSON.parse(body)); } 
+      catch (e) { resolve(null); }
+    });
+    request.on('error', reject);
+  });
 }
 
 async function main() {
   await ensureProjectFolders(config);
   const logger = await createLogger(config);
-  const server = http.createServer((request, response) => {
+  const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host}`);
+    const method = request.method;
+
+    if (method === 'OPTIONS') {
+      response.writeHead(204, {
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
+        'access-control-allow-headers': 'content-type'
+      });
+      response.end();
+      return;
+    }
+
     const db = new ArchiveDatabase(config.paths.dbPath);
 
     try {
-      if (url.pathname === '/health') {
+      if (url.pathname === '/' && method === 'GET') {
+        const htmlPath = path.join(__dirname, 'ui', 'index.html');
+        if (fs.existsSync(htmlPath)) {
+          response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+          fs.createReadStream(htmlPath).pipe(response);
+          return;
+        }
+      }
+
+      if (url.pathname === '/health' && method === 'GET') {
         sendJson(response, 200, { ok: true, counts: db.getCounts() });
         return;
       }
 
-      if (url.pathname === '/courses' || url.pathname === '/master_index.json') {
+      if (url.pathname === '/courses' && method === 'GET') {
         sendJson(response, 200, db.getCoursesGraph());
+        return;
+      }
+
+      if (url.pathname === '/plan' && method === 'GET') {
+        let plan = db.getDownloadPlan();
+        if (!plan) {
+          const res = await exportDownloadPlan(db, config);
+          plan = res.plan;
+        }
+        sendJson(response, 200, plan);
+        return;
+      }
+
+      if (url.pathname === '/plan/refresh' && method === 'POST') {
+        runEngineDetached(['--plan-only']);
+        sendJson(response, 202, { status: 'refresh_started' });
+        return;
+      }
+
+      if (url.pathname === '/selection' && method === 'GET') {
+        const selection = db.getDownloadSelection() || { selection_mode: 'explicit' };
+        sendJson(response, 200, selection);
+        return;
+      }
+
+      if (url.pathname === '/selection' && method === 'PUT') {
+        const selection = await jsonBody(request);
+        if (selection) {
+          db.saveDownloadSelection(selection);
+          sendJson(response, 200, { ok: true });
+        } else {
+          sendJson(response, 400, { error: 'invalid_json' });
+        }
+        return;
+      }
+
+      if (url.pathname === '/downloads/selected' && method === 'POST') {
+        runEngineDetached(['--download-selected']);
+        sendJson(response, 202, { status: 'download_started' });
+        return;
+      }
+
+      if (url.pathname === '/downloads/status' && method === 'GET') {
+        // Mock status for now
+        sendJson(response, 200, { active: false, current: null });
+        return;
+      }
+
+      if (url.pathname === '/open' && method === 'POST') {
+        const body = await jsonBody(request);
+        if (body && body.id) {
+          const row = db.db.prepare('SELECT local_path FROM attachments WHERE id = ?').get(body.id);
+          if (row && row.local_path) {
+            const absolutePath = path.resolve(process.cwd(), row.local_path);
+            if (fs.existsSync(absolutePath)) {
+              const { default: openSys } = await import('open');
+              await openSys(absolutePath);
+              sendJson(response, 200, { ok: true });
+            } else {
+              sendJson(response, 404, { error: 'File not found locally' });
+            }
+          } else {
+            sendJson(response, 404, { error: 'File not found locally' });
+          }
+        } else {
+          sendJson(response, 400, { error: 'Missing attachment id' });
+        }
+        return;
+      }
+
+      if (url.pathname === '/db/reset' && method === 'DELETE') {
+        db.transaction(() => {
+          const tables = ['courses', 'topics', 'materials', 'attachments', 'download_plan', 'download_selection', 'crawl_state'];
+          for (const table of tables) {
+            db.db.exec(`DELETE FROM ${table}`);
+          }
+        });
+        sendJson(response, 200, { ok: true });
+        return;
+      }
+
+      if (url.pathname === '/db/files' && method === 'GET') {
+        const stmt = db.db.prepare(`
+          SELECT 
+            attachments.id, attachments.filename, attachments.mime_type, 
+            attachments.status, attachments.local_path, attachments.error, attachments.bytes as size_bytes,
+            materials.title as material_title,
+            topics.title as topic_title,
+            courses.name as course_name
+          FROM attachments 
+          LEFT JOIN materials ON attachments.material_id = materials.id
+          LEFT JOIN topics ON materials.topic_id = topics.id
+          LEFT JOIN courses ON materials.course_id = courses.id
+          ORDER BY courses.name, topics.title, materials.title, attachments.filename
+        `);
+        sendJson(response, 200, stmt.all());
+        return;
+      }
+
+      if (url.pathname === '/export' && method === 'POST') {
+        await exportArchive(db, config);
+        sendJson(response, 200, { ok: true });
         return;
       }
 
       sendJson(response, 404, {
         error: 'not_found',
-        routes: ['/health', '/courses', '/master_index.json']
+        routes: ['/health', '/plan', '/selection', '/downloads/selected', '/export']
       });
     } catch (error) {
       sendJson(response, 500, { error: error.message });
@@ -43,7 +211,13 @@ async function main() {
   });
 
   server.listen(config.apiPort, config.apiHost, () => {
-    logger.info(`Archive API listening at http://${config.apiHost}:${config.apiPort}`);
+    const url = `http://${config.apiHost}:${config.apiPort}`;
+    logger.info(`Archive API listening at ${url}`);
+    
+    // Automatically open the browser if running as UI
+    if (process.argv[1]?.endsWith('server.js') && process.stdout.isTTY) {
+      openBrowser(url).catch(() => {});
+    }
   });
 }
 

@@ -79,9 +79,24 @@ export class ArchiveDatabase {
         error TEXT,
         bytes INTEGER,
         checksum TEXT,
+        selected INTEGER DEFAULT 1,
+        skipped_reason TEXT,
+        planned_bytes INTEGER,
         raw_json TEXT,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(material_id) REFERENCES materials(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS download_plan (
+        id TEXT PRIMARY KEY DEFAULT '1',
+        raw_json TEXT,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS download_selection (
+        id TEXT PRIMARY KEY DEFAULT '1',
+        raw_json TEXT,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS crawl_state (
@@ -97,6 +112,16 @@ export class ArchiveDatabase {
       CREATE INDEX IF NOT EXISTS idx_attachments_file_id ON attachments(file_id);
       CREATE INDEX IF NOT EXISTS idx_attachments_status ON attachments(status);
     `);
+    
+    try {
+      this.db.exec("ALTER TABLE attachments ADD COLUMN selected INTEGER DEFAULT 1");
+    } catch {}
+    try {
+      this.db.exec("ALTER TABLE attachments ADD COLUMN skipped_reason TEXT");
+    } catch {}
+    try {
+      this.db.exec("ALTER TABLE attachments ADD COLUMN planned_bytes INTEGER");
+    } catch {}
   }
 
   transaction(fn) {
@@ -249,6 +274,34 @@ export class ArchiveDatabase {
       });
   }
 
+  saveDownloadPlan(plan) {
+    this.db
+      .prepare(
+        `INSERT INTO download_plan (id, raw_json, updated_at) VALUES ('1', ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(id) DO UPDATE SET raw_json = excluded.raw_json, updated_at = CURRENT_TIMESTAMP`
+      )
+      .run(stringify(plan));
+  }
+
+  getDownloadPlan() {
+    const row = this.db.prepare(`SELECT raw_json FROM download_plan WHERE id = '1'`).get();
+    return parseJson(row?.raw_json, null);
+  }
+
+  saveDownloadSelection(selection) {
+    this.db
+      .prepare(
+        `INSERT INTO download_selection (id, raw_json, updated_at) VALUES ('1', ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(id) DO UPDATE SET raw_json = excluded.raw_json, updated_at = CURRENT_TIMESTAMP`
+      )
+      .run(stringify(selection));
+  }
+
+  getDownloadSelection() {
+    const row = this.db.prepare(`SELECT raw_json FROM download_selection WHERE id = '1'`).get();
+    return parseJson(row?.raw_json, null);
+  }
+
   findCompletedAttachmentByFileId(fileId) {
     if (!fileId) return null;
     return this.db
@@ -318,6 +371,7 @@ export class ArchiveDatabase {
         source_url: attachment.source_url,
         download_url: attachment.download_url,
         status: attachment.status,
+        skipped_reason: attachment.skipped_reason || raw.skipped_reason || null,
         downloaded_files: raw.downloaded_files || []
       };
       if (!attachmentsByMaterial.has(attachment.material_id)) attachmentsByMaterial.set(attachment.material_id, []);

@@ -13,8 +13,50 @@ async function localPathExists(localPath, activeConfig) {
   return fs.pathExists(resolveOutputPath(localPath, activeConfig));
 }
 
-export async function downloadAllAttachments({ db, drive, logger, activeConfig = config }) {
-  const attachments = db.listAttachmentsForDownload();
+export async function downloadAllAttachments({ db, drive, logger, activeConfig = config, selection = null }) {
+  let attachments = db.listAttachmentsForDownload();
+  
+  if (selection) {
+    const includedAttachmentIds = new Set(selection.selected_attachment_ids || []);
+    const excludedAttachmentIds = new Set(selection.excluded_attachment_ids || []);
+    const includedMaterialIds = new Set(selection.selected_material_ids || []);
+    const includedTopicIds = new Set(selection.selected_topic_ids || []);
+    const includedCourseIds = new Set(selection.selected_course_ids || []);
+    const filters = selection.filters || {};
+
+    const filteredAttachments = [];
+    for (const a of attachments) {
+      if (excludedAttachmentIds.has(a.id)) {
+        db.updateAttachmentDownload(a.id, { status: 'skipped', raw: { skipped_reason: 'user_unselected' }});
+        continue;
+      }
+
+      let included = false;
+      if (selection.selection_mode === 'explicit') {
+        if (includedAttachmentIds.has(a.id) || includedMaterialIds.has(a.material_id) || includedTopicIds.has(a.topic_id) || includedCourseIds.has(a.course_id)) {
+          included = true;
+        }
+      } else {
+        // implicit mode implies everything not excluded is included subject to filters
+        included = true;
+      }
+
+      if (included && filters) {
+        if (filters.material_types?.length && !filters.material_types.includes(a.material_type)) included = false;
+        if (filters.mime_types?.length && !filters.mime_types.includes(a.mime_type)) included = false;
+        if (filters.providers?.length && !filters.providers.includes(a.provider)) included = false;
+        if (filters.query && !(a.filename || '').toLowerCase().includes(filters.query.toLowerCase())) included = false;
+      }
+
+      if (!included) {
+        db.updateAttachmentDownload(a.id, { status: 'skipped', raw: { skipped_reason: 'user_unselected' }});
+      } else {
+        filteredAttachments.push(a);
+      }
+    }
+    attachments = filteredAttachments;
+  }
+
   if (!attachments.length) {
     logger?.info?.('No pending attachments to download');
     return { downloaded: 0, skipped: 0, failed: 0 };
