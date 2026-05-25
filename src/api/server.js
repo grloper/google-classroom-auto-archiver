@@ -42,8 +42,8 @@ async function main() {
     }
   });
 
-  server.listen(config.apiPort, () => {
-    logger.info(`Archive API listening at http://localhost:${config.apiPort}`);
+  server.listen(config.apiPort, config.apiHost, () => {
+    logger.info(`Archive API listening at http://${config.apiHost}:${config.apiPort}`);
   });
 }
 

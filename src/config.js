@@ -41,6 +41,7 @@ export const config = {
   maxRetries: parseInteger(process.env.MAX_RETRIES, 4),
   courseStates: parseList(process.env.COURSE_STATES, ['ACTIVE', 'ARCHIVED']),
   apiPort: parseInteger(process.env.API_PORT, 4317),
+  apiHost: process.env.API_HOST || '127.0.0.1',
   paths: {
     outputRoot: resolveFromRoot(process.env.DOWNLOAD_PATH, './output'),
     coursesRoot: path.join(resolveFromRoot(process.env.DOWNLOAD_PATH, './output'), 'courses'),

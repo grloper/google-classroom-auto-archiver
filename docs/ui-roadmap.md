@@ -2,6 +2,8 @@
 
 The engine is API-first today. The next product step is a local dashboard for reviewing the archive plan before downloads run.
 
+For an implementation-ready JSON prompt, see [prompts/selective-download-ui.prompt.json](prompts/selective-download-ui.prompt.json).
+
 ## Goals
 
 - Show discovered courses, topics, materials, and attachments before downloading.

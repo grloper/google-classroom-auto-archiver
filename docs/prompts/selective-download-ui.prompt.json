@@ -1,0 +1,275 @@
+{
+  "name": "selective-download-ui-production-implementation",
+  "version": "1.0.0",
+  "purpose": "Implement a production-ready local dashboard that lets the user choose exactly which discovered Google Classroom content should be downloaded and exported.",
+  "context": {
+    "project": "google-classroom-auto-archiver",
+    "runtime": "Node.js >=20",
+    "security_model": "Local-first. Tokens, metadata, downloaded content, and selection manifests must remain on the user's machine.",
+    "current_entrypoints": {
+      "engine": "src/system/engine.js",
+      "crawler": "src/crawler/run.js",
+      "storage": "src/storage/database.js",
+      "downloader": "src/downloaders/downloadManager.js",
+      "api": "src/api/server.js",
+      "exporter": "src/storage/exporter.js"
+    }
+  },
+  "objective": {
+    "summary": "Add a selective archive workflow with plan generation, local UI review, persisted selections, filtered downloads, and migration-ready exports.",
+    "primary_user_story": "As a user, I want the engine to discover Classroom content first, show me a local UI with courses/topics/materials/files, let me choose what to archive, and download only the selected content.",
+    "success_criteria": [
+      "One command discovers content and opens a local selection UI.",
+      "The UI shows every discovered course, topic, material, and attachment in a searchable tree/table.",
+      "The user can select or deselect at course, topic, material, attachment, MIME type, provider, and date-range levels.",
+      "Selections persist locally and can be resumed after interruption.",
+      "The download phase only downloads selected attachments.",
+      "The final JSON and SQLite exports include selected, skipped, failed, and complete statuses.",
+      "CI, security, privacy, and compliance checks pass before merge or release."
+    ]
+  },
+  "commands_to_add": {
+    "engine": [
+      "npm run engine -- --plan-only",
+      "npm run engine -- --select",
+      "npm run engine -- --selection ./output/download_selection.json",
+      "npm run engine -- --download-selected"
+    ],
+    "ui": [
+      "npm run ui",
+      "npm run ui:dev"
+    ],
+    "quality": [
+      "npm run release:check",
+      "npm run compliance:check",
+      "npm run sanitize:check"
+    ]
+  },
+  "architecture": {
+    "phases": [
+      {
+        "id": "plan",
+        "description": "Crawl metadata only and enrich Drive metadata without downloading file bodies.",
+        "outputs": ["output/download_plan.json", "database/classroom.db"]
+      },
+      {
+        "id": "review",
+        "description": "Serve a local-only UI from 127.0.0.1 where the user reviews and edits selections.",
+        "outputs": ["output/download_selection.json"]
+      },
+      {
+        "id": "download",
+        "description": "Read the selection manifest and download only selected attachments.",
+        "outputs": ["output/courses/**", "database/classroom.db"]
+      },
+      {
+        "id": "export",
+        "description": "Export selected archive metadata and skipped item metadata.",
+        "outputs": ["output/master_index.json"]
+      }
+    ],
+    "local_services": {
+      "host": "127.0.0.1",
+      "default_port": 4317,
+      "network_policy": "Never bind to 0.0.0.0 by default. Never send archive data to a hosted service."
+    },
+    "suggested_ui_stack": {
+      "minimum": "Static HTML/CSS/vanilla JS served by the existing Node API",
+      "production_option": "Vite + React after the API contract stabilizes",
+      "icons": "Use lucide icons if a React UI is introduced"
+    }
+  },
+  "data_contracts": {
+    "download_plan_json": {
+      "path": "output/download_plan.json",
+      "schema": {
+        "generated_at": "string ISO timestamp",
+        "courses": [
+          {
+            "id": "string",
+            "name": "string",
+            "teacher": "string",
+            "selected_default": "boolean",
+            "topics": [
+              {
+                "id": "string",
+                "title": "string",
+                "materials": [
+                  {
+                    "id": "string",
+                    "title": "string",
+                    "type": "assignment | material | question | quiz | announcement",
+                    "due_date": "string | null",
+                    "attachments": [
+                      {
+                        "id": "string",
+                        "filename": "string",
+                        "mime_type": "string",
+                        "provider": "drive | link | youtube | form",
+                        "file_id": "string | null",
+                        "size_bytes": "number | null",
+                        "downloadable": "boolean",
+                        "selected_default": "boolean",
+                        "skip_reason": "string | null"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "download_selection_json": {
+      "path": "output/download_selection.json",
+      "schema": {
+        "created_at": "string ISO timestamp",
+        "updated_at": "string ISO timestamp",
+        "selection_mode": "explicit",
+        "selected_course_ids": ["string"],
+        "selected_topic_ids": ["string"],
+        "selected_material_ids": ["string"],
+        "selected_attachment_ids": ["string"],
+        "excluded_attachment_ids": ["string"],
+        "filters": {
+          "material_types": ["string"],
+          "mime_types": ["string"],
+          "providers": ["string"],
+          "due_date_from": "string | null",
+          "due_date_to": "string | null",
+          "query": "string | null"
+        }
+      }
+    },
+    "sqlite_changes": [
+      "Add download_plan table for generated plan metadata.",
+      "Add download_selection table for persisted selection state.",
+      "Add selected INTEGER DEFAULT 1, skipped_reason TEXT, planned_bytes INTEGER to attachments or a selection join table."
+    ]
+  },
+  "api_contract": {
+    "base_url": "http://127.0.0.1:4317",
+    "endpoints": [
+      { "method": "GET", "path": "/health", "purpose": "Return server health and counts." },
+      { "method": "GET", "path": "/plan", "purpose": "Return the current download plan." },
+      { "method": "POST", "path": "/plan/refresh", "purpose": "Trigger metadata-only crawl and regenerate the plan." },
+      { "method": "GET", "path": "/selection", "purpose": "Return current selection manifest." },
+      { "method": "PUT", "path": "/selection", "purpose": "Replace current selection manifest." },
+      { "method": "POST", "path": "/downloads/selected", "purpose": "Start selected download execution." },
+      { "method": "GET", "path": "/downloads/status", "purpose": "Return progress, failures, skipped items, and resumable state." },
+      { "method": "POST", "path": "/export", "purpose": "Regenerate SQLite and master_index JSON from current state." }
+    ]
+  },
+  "ui_requirements": {
+    "primary_views": [
+      "Course tree with tri-state checkboxes",
+      "Attachment table with search, filters, sorting, and bulk select",
+      "Summary panel with selected courses/materials/files and estimated size",
+      "Download progress view with retry/skip/failure details",
+      "Settings view for concurrency, retry count, output path, and export formats"
+    ],
+    "selection_controls": [
+      "Select all / none",
+      "Select by course",
+      "Select by topic",
+      "Select by material type",
+      "Select by provider",
+      "Select by MIME type",
+      "Select by due date range",
+      "Search and select matching items",
+      "Exclude individual attachments"
+    ],
+    "expected_states": [
+      "No OAuth token",
+      "No plan generated",
+      "Plan ready",
+      "Unsaved selection changes",
+      "Download running",
+      "Download paused/interrupted",
+      "Download complete with failures",
+      "Export complete"
+    ]
+  },
+  "engine_changes": {
+    "required_flags": [
+      { "flag": "--plan-only", "behavior": "Crawl metadata, enrich Drive metadata, write plan, do not download." },
+      { "flag": "--select", "behavior": "Run plan generation if needed, then start local UI." },
+      { "flag": "--selection <path>", "behavior": "Use a specific selection manifest." },
+      { "flag": "--download-selected", "behavior": "Download only selected items from the manifest." }
+    ],
+    "download_manager": [
+      "Accept a predicate or selection set.",
+      "Skip unselected attachments with status skipped and skipped_reason user_unselected.",
+      "Preserve dedupe and resume behavior for selected items.",
+      "Keep reference files for selected external, YouTube, and Form items."
+    ],
+    "exporter": [
+      "Include selected, skipped, failed, and complete status in master_index.json.",
+      "Do not hide skipped items unless the user passes an explicit export filter."
+    ]
+  },
+  "ci_cd_requirements": {
+    "branches": {
+      "develop": "active development and UI work",
+      "staging": "release candidate validation",
+      "main": "production-ready public code"
+    },
+    "required_checks": [
+      "npm ci",
+      "npm run check",
+      "npm test",
+      "npm run sanitize:check",
+      "npm run compliance:check",
+      "npm audit --audit-level=low",
+      "CodeQL JavaScript analysis"
+    ],
+    "release_policy": [
+      "vX.Y.Z-rc.N tags create GitHub prereleases for staging validation.",
+      "vX.Y.Z tags create production GitHub releases.",
+      "No release if sanitizer, compliance, tests, or audit fail."
+    ]
+  },
+  "compliance_requirements": {
+    "privacy": [
+      "No OAuth tokens committed.",
+      "No Classroom data committed.",
+      "No downloaded files committed.",
+      "No logs committed.",
+      "No credentials committed.",
+      "Local API binds to 127.0.0.1 by default."
+    ],
+    "google_api": [
+      "Use least-privilege read-only OAuth scopes where possible.",
+      "Never automate Google password entry.",
+      "OAuth consent and test-user setup must be documented.",
+      "Respect user account permissions and Drive access constraints."
+    ]
+  },
+  "acceptance_tests": [
+    "Given no token, engine opens OAuth in system browser and does not use Playwright login by default.",
+    "Given a token, --plan-only writes download_plan.json without downloading files.",
+    "Given a plan, the UI renders courses/topics/materials/attachments.",
+    "Given a partial selection, --download-selected downloads only selected attachments.",
+    "Given an interrupted run, rerunning resumes selected pending downloads.",
+    "Given external links and YouTube items selected, reference JSON files are written.",
+    "Given unselected items, master_index.json includes skipped_reason user_unselected.",
+    "Given CI, all required checks pass on Node 20 and 22."
+  ],
+  "implementation_order": [
+    "Add plan-only crawl/export path.",
+    "Add selection schema and persistence.",
+    "Add filtered download manager support.",
+    "Add local API endpoints for plan, selection, and progress.",
+    "Build local UI against mocked plan JSON.",
+    "Wire UI to live local API.",
+    "Add tests for plan generation, selection filtering, and API endpoints.",
+    "Update docs and release checklist."
+  ],
+  "non_goals": [
+    "Hosted SaaS dashboard",
+    "Uploading user Classroom data to any external service",
+    "Bypassing Google account permissions",
+    "Automated password-based Google login"
+  ]
+}

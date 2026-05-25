@@ -1,5 +1,8 @@
 # Google Classroom Auto Archiver
 
+[![CI](https://github.com/grloper/google-classroom-auto-archiver/actions/workflows/ci.yml/badge.svg)](https://github.com/grloper/google-classroom-auto-archiver/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/grloper/google-classroom-auto-archiver/actions/workflows/codeql.yml/badge.svg)](https://github.com/grloper/google-classroom-auto-archiver/actions/workflows/codeql.yml)
+
 Fully automatic, local-first Google Classroom archive engine for migration, backup, and content indexing.
 
 API-first Google Classroom archival engine with Playwright session fallback. It discovers accessible courses, crawls topics/coursework/materials/announcements, downloads Drive assets where permitted, writes SQLite metadata, and exports `output/master_index.json` for migration into another learning platform.
@@ -136,7 +139,8 @@ npm run crawl         # low-level crawl/download/export command
 npm run export        # regenerate JSON from SQLite
 npm run api           # local JSON API for future frontend work
 npm run sanitize:check # verify public files do not contain obvious private data
-npm run release:check # check, test, sanitize, audit
+npm run compliance:check # validate local-only and release safety rules
+npm run release:check # check, test, sanitize, compliance, audit
 npm test              # parser/storage-safe unit tests
 ```
 
@@ -201,6 +205,23 @@ Before publishing, run:
 npm run release:check
 ```
 
+## CI/CD And Environments
+
+The public repository includes GitHub Actions for:
+
+- CI on `main`, `develop`, `staging`, and pull requests.
+- Node.js 20 and 22 validation.
+- CodeQL JavaScript analysis.
+- Tag-based release publishing.
+- Weekly Dependabot checks for npm and GitHub Actions.
+
+Release channels:
+
+- `vX.Y.Z-rc.N` creates a staging prerelease.
+- `vX.Y.Z` creates a production release.
+
+See [docs/environments.md](docs/environments.md) for branch, staging, production, and compliance gates.
+
 ## Next Level UI
 
 The next planned milestone is a local dashboard for choosing exactly what to download before the download phase starts.
@@ -215,6 +236,7 @@ flowchart LR
 ```
 
 See [docs/ui-roadmap.md](docs/ui-roadmap.md) for the implementation plan.
+See [docs/prompts/selective-download-ui.prompt.json](docs/prompts/selective-download-ui.prompt.json) for the end-to-end JSON implementation prompt.
 
 ## Current API Coverage
 

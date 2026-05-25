@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.1 - Production Workflow Hardening
+
+- Added production selective-download UI implementation prompt.
+- Added CI, CodeQL, release, Dependabot, and compliance validation configuration.
+- Added environment and promotion documentation.
+- Locked local API host to `127.0.0.1` by default.
+
 ## v0.1.0 - Initial Public Release
 
 - Added API-first Google Classroom crawler.

@@ -6,6 +6,7 @@ Run these checks before tagging a public release:
 npm run check
 npm test
 npm run sanitize:check
+npm run compliance:check
 npm audit --audit-level=low
 npm run doctor
 ```
