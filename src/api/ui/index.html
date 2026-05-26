@@ -6,21 +6,61 @@
   <title>Classroom Downloader Dashboard</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+        }
+      }
+    }
+  </script>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- Load Canvas Background Animation -->
+  <script src="/canvas.js" defer></script>
+
   <style>
-    body { background-color: #f8fafc; color: #0f172a; }
-    /* Hide scrollbar for clean ui */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    body { background-color: #eef2f6; color: #0f172a; margin: 0; overflow: hidden; }
+    #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+    
+    /* Clean custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.5); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
+
+    /* Glassmorphism utilities */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.04);
+    }
+    
+    .glass-header {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
   </style>
 </head>
 <body>
+  <canvas id="bg-canvas"></canvas>
   <div id="root"></div>
 
   <script type="text/babel">
@@ -50,7 +90,8 @@
       return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
     }
 
-    const API_BASE = 'http://127.0.0.1:4317';
+    // Determine base API URL dynamically based on where the UI is served from
+    const API_BASE = window.location.origin;
 
     function App() {
       const [apiStatus, setApiStatus] = useState({ online: false, counts: null });
@@ -65,31 +106,25 @@
       const refreshData = async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-          const resHealth = await fetch(`${API_BASE}/health`);
+          const [resHealth, resPlan, resSel, resFiles, resCourses] = await Promise.all([
+            fetch(`${API_BASE}/health`).catch(() => ({ ok: false })),
+            fetch(`${API_BASE}/plan`).catch(() => ({ ok: false })),
+            fetch(`${API_BASE}/selection`).catch(() => ({ ok: false })),
+            fetch(`${API_BASE}/db/files`).catch(() => ({ ok: false })),
+            fetch(`${API_BASE}/courses`).catch(() => ({ ok: false }))
+          ]);
+
           if (resHealth.ok) {
             const data = await resHealth.json();
             setApiStatus({ online: true, counts: data.counts });
+          } else {
+            setApiStatus({ online: false, counts: null });
           }
           
-          const resPlan = await fetch(`${API_BASE}/plan`);
-          if (resPlan.ok) {
-            setPlan(await resPlan.json());
-          }
-
-          const resSel = await fetch(`${API_BASE}/selection`);
-          if (resSel.ok) {
-            setSelection(await resSel.json() || { selection_mode: 'implicit', excluded_attachment_ids: [] });
-          }
-
-          const resFiles = await fetch(`${API_BASE}/db/files`);
-          if (resFiles.ok) {
-            setDbFiles(await resFiles.json() || []);
-          }
-
-          const resCourses = await fetch(`${API_BASE}/courses`);
-          if (resCourses.ok) {
-            setCoursesData(await resCourses.json());
-          }
+          if (resPlan.ok) setPlan(await resPlan.json());
+          if (resSel.ok) setSelection(await resSel.json() || { selection_mode: 'implicit', excluded_attachment_ids: [] });
+          if (resFiles.ok) setDbFiles(await resFiles.json() || []);
+          if (resCourses.ok) setCoursesData(await resCourses.json());
         } catch (e) {
           setApiStatus({ online: false, counts: null });
           console.error("API not available", e);
@@ -132,7 +167,7 @@
         alert('Crawl command sent to sync Classroom. Monitor terminal for metadata generation progress, then refresh this page.');
       };
 
-      const handleSaveSelection = async () => {
+      const handleSaveSelection = async (btnId) => {
         if (!selection) return;
 
         const excludedCount = selection.excluded_attachment_ids?.length || 0;
@@ -156,26 +191,24 @@
           body: JSON.stringify(payloadToSave)
         });
         
-        const btn1 = document.getElementById('save-btn-top');
-        const btn2 = document.getElementById('save-btn-top-2');
+        const btn = document.getElementById(btnId);
+        if(!btn) return;
+        const origText = btn.innerHTML;
+        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> Saved Successfully!`;
+        btn.classList.add('bg-emerald-500', 'text-white', 'border-emerald-600');
+        btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-700', 'bg-white', 'text-slate-700');
+        if (window.lucide) window.lucide.createIcons();
         
-        [btn1, btn2].forEach(btn => {
-          if(!btn) return;
-          const origText = btn.innerHTML;
-          btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> Saved Successfully!`;
-          btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
-          btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-          setTimeout(() => {
-            btn.innerHTML = origText;
-            btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
-            btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-          }, 2500);
-        });
+        setTimeout(() => {
+          btn.innerHTML = origText;
+          btn.className = btn.getAttribute('data-orig-class');
+          if (window.lucide) window.lucide.createIcons();
+        }, 2500);
       };
 
       const handleStartDownload = async () => {
         await fetch(`${API_BASE}/downloads/selected`, { method: 'POST' });
-        alert('Download process activated. See terminal for real-time progress constraints.');
+        alert('Download process activated. See terminal for real-time progress.');
       };
 
       const handleResetDatabase = async () => {
@@ -190,7 +223,7 @@
           const res = await fetch(`${API_BASE}/db/reset`, { method: 'DELETE' });
           if (res.ok) {
             alert('Database has been completely erased.');
-            refreshData(); // Force refresh to show empty state
+            refreshData(); 
           } else {
             alert('Failed to reset database.');
           }
@@ -201,67 +234,64 @@
       };
 
       if (loading && !plan) {
-        return <div className="flex h-screen items-center justify-center text-xl text-slate-500 gap-3"><Icon name="loader-2" className="animate-spin" /> Initializing Workspace...</div>;
+        return (
+          <div className="flex h-screen items-center justify-center relative z-10">
+            <div className="glass-card p-10 rounded-3xl flex flex-col items-center gap-4">
+              <Icon name="loader-2" className="animate-spin text-blue-500 w-10 h-10" /> 
+              <span className="text-xl font-medium text-slate-600">Initializing Workspace...</span>
+            </div>
+          </div>
+        );
       }
 
       return (
-        <div className="flex h-screen flex-col overflow-hidden bg-slate-50 font-sans">
-          <header className="flex h-16 shrink-0 items-center justify-between border-b bg-white px-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 shadow-sm text-white">
+        <div className="flex h-screen flex-col overflow-hidden font-sans relative z-10">
+          <header className="flex h-16 shrink-0 items-center justify-between px-6 glass-header z-20">
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30 text-white">
                 <Icon name="download-cloud" className="h-5 w-5" />
               </div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">Classroom Downloader</h1>
+              <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">Classroom Downloader</h1>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium border">
-                <span className={`h-2.5 w-2.5 rounded-full shadow-sm ${apiStatus.online ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></span>
-                {apiStatus.online ? 'Engine Connected' : 'Engine Offline'}
+              <div className="flex items-center gap-2 rounded-full glass-card px-4 py-1.5 text-sm font-medium shadow-sm transition-all hover:shadow">
+                <span className={`h-2.5 w-2.5 rounded-full shadow-sm ${apiStatus.online ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-red-500 animate-pulse-slow shadow-red-500/50'}`}></span>
+                <span className="text-slate-700">{apiStatus.online ? 'Engine Connected' : 'Engine Offline'}</span>
               </div>
             </div>
           </header>
 
           <main className="flex flex-1 overflow-hidden">
-            <aside className="w-64 border-r bg-white p-4 flex flex-col gap-2 shadow-[2px_0_10px_-5px_rgba(0,0,0,0.1)] z-10">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 px-3 mb-2 mt-2">DASHBOARD</div>
-              <div 
-                className={`cursor-pointer rounded-md px-3 py-2.5 font-medium flex gap-3 items-center transition-colors ${activeTab === 'classroom' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                onClick={() => setActiveTab('classroom')}
-              >
-                <Icon name="presentation" className="w-4 h-4" /> My Classroom
-              </div>
-              <div 
-                className={`cursor-pointer rounded-md px-3 py-2.5 font-medium flex gap-3 items-center transition-colors ${activeTab === 'overview' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                onClick={() => setActiveTab('overview')}
-              >
-                <Icon name="layout-dashboard" className="w-4 h-4" /> Overview
-              </div>
-              <div 
-                className={`cursor-pointer rounded-md px-3 py-2.5 font-medium flex gap-3 items-center transition-colors ${activeTab === 'courses' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                onClick={() => setActiveTab('courses')}
-              >
-                <Icon name="list-tree" className="w-4 h-4" /> Download Plan
-              </div>
-              <div 
-                className={`cursor-pointer rounded-md px-3 py-2.5 font-medium flex gap-3 items-center transition-colors ${activeTab === 'settings' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                onClick={() => setActiveTab('settings')}
-              >
-                <Icon name="settings" className="w-4 h-4" /> System Details
-              </div>
+            <aside className="w-64 p-4 flex flex-col gap-2 glass-panel z-10 border-r-0 border-white/40 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 mb-2 mt-2">Navigation</div>
+              {[
+                { id: 'classroom', icon: 'presentation', label: 'My Classroom' },
+                { id: 'overview', icon: 'layout-dashboard', label: 'Overview' },
+                { id: 'courses', icon: 'list-tree', label: 'Download Plan' },
+                { id: 'settings', icon: 'settings', label: 'System Details' }
+              ].map(tab => (
+                <div 
+                  key={tab.id}
+                  className={`cursor-pointer rounded-xl px-4 py-3 font-medium flex gap-3 items-center transition-all duration-300 ${activeTab === tab.id ? 'bg-white/80 text-blue-600 shadow-sm border border-white/60' : 'text-slate-600 hover:bg-white/40 hover:text-slate-900 border border-transparent'}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <Icon name={tab.icon} className={`w-4 h-4 ${activeTab === tab.id ? 'text-blue-500' : 'opacity-70'}`} /> {tab.label}
+                </div>
+              ))}
             </aside>
 
-            <section className="flex-1 overflow-y-auto bg-slate-50/50 p-8">
-              <div className="max-w-5xl mx-auto space-y-6">
+            <section className="flex-1 overflow-y-auto p-8 relative">
+              <div className="max-w-6xl mx-auto space-y-6 pb-20">
                 
                 {activeTab === 'classroom' && coursesData && (
-                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex items-center justify-between border-b pb-4">
+                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="flex items-center justify-between glass-card p-4 px-6 rounded-2xl border-white/60">
                       <div>
                         <h2 className="text-2xl font-bold text-slate-800 tracking-tight">My Classroom</h2>
                         <p className="text-sm text-slate-500 mt-1">View your downloaded materials and assignments. Click files to open them instantly.</p>
                       </div>
                       <select 
-                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="rounded-xl border border-white/60 bg-white/50 backdrop-blur-md px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all cursor-pointer hover:bg-white/80"
                         value={selectedCourseId || ''}
                         onChange={(e) => setSelectedCourseId(e.target.value)}
                       >
@@ -276,25 +306,28 @@
                       {coursesData.courses?.filter(c => c.id === selectedCourseId).map(course => (
                         <div key={course.id} className="flex flex-col gap-8">
                           {/* Course Header */}
-                          <div className="rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-800 p-10 text-white shadow-lg relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-8 opacity-10">
-                              <Icon name="book-open" className="w-48 h-48" />
+                          <div className="rounded-[2rem] bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-700/90 backdrop-blur-md p-10 text-white shadow-xl shadow-blue-900/10 border border-white/20 relative overflow-hidden group">
+                            <div className="absolute -top-20 -right-20 p-8 opacity-10 group-hover:scale-110 group-hover:rotate-6 group-hover:opacity-20 transition-all duration-700">
+                              <Icon name="book-open" className="w-96 h-96" />
                             </div>
                             <div className="relative z-10">
-                              <h1 className="text-4xl font-bold mb-3 tracking-tight">{course.name}</h1>
+                              <h1 className="text-5xl font-extrabold mb-4 tracking-tight drop-shadow-sm">{course.name}</h1>
                               <p className="text-blue-100 font-medium text-lg flex items-center gap-2">
-                                <Icon name="user" className="w-5 h-5"/> {course.teacher}
+                                <span className="bg-white/20 p-1.5 rounded-lg backdrop-blur-md"><Icon name="user" className="w-4 h-4"/></span> {course.teacher}
                               </p>
-                              {course.section && <p className="text-sm text-blue-200 mt-2 bg-black/20 inline-block px-3 py-1 rounded-full">{course.section}</p>}
+                              {course.section && <p className="text-sm text-blue-200 mt-3 bg-black/20 inline-block px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10">{course.section}</p>}
                             </div>
                           </div>
 
                           {/* Topics */}
-                          <div className="flex flex-col gap-10">
+                          <div className="flex flex-col gap-8">
                             {course.topics?.map(topic => (
                               <div key={topic.id} className="flex flex-col gap-5">
-                                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-blue-500/20 pb-3 flex items-center gap-3">
-                                  <Icon name="folder" className="w-6 h-6 text-blue-500"/> {topic.title || 'Stream / General'}
+                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3 pl-2">
+                                  <div className="p-2 bg-white/60 rounded-xl shadow-sm border border-white/80 text-blue-500">
+                                    <Icon name="folder" className="w-5 h-5"/>
+                                  </div>
+                                  {topic.title || 'Stream / General'}
                                 </h2>
                                 
                                 <div className="grid grid-cols-1 gap-5">
@@ -302,29 +335,29 @@
                                     const mType = mat.type ? mat.type.toLowerCase() : 'other';
                                     const isAssignment = mType === 'assignment';
                                     return (
-                                      <div key={mat.id} className={`flex gap-5 p-6 rounded-2xl border bg-white shadow-sm hover:shadow-md transition-all ${isAssignment ? 'border-l-4 border-l-blue-500 border-slate-200' : 'border-l-4 border-l-emerald-500 border-slate-200'}`}>
-                                        <div className={`mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${isAssignment ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                          <Icon name={isAssignment ? 'clipboard-check' : 'book-open'} className="w-6 h-6"/>
+                                      <div key={mat.id} className={`flex gap-5 p-6 rounded-2xl glass-card transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${isAssignment ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-emerald-500'}`}>
+                                        <div className={`mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-sm ${isAssignment ? 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 border border-blue-200/50' : 'bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600 border border-emerald-200/50'}`}>
+                                          <Icon name={isAssignment ? 'clipboard-check' : 'book-open'} className="w-7 h-7"/>
                                         </div>
                                         <div className="flex-1 flex flex-col gap-3 min-w-0">
                                           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                                             <div>
-                                              <h3 className="font-bold text-xl text-slate-900">{mat.title}</h3>
-                                              <div className="flex gap-2 items-center mt-1.5">
-                                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${isAssignment ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{mType}</span>
-                                                {mat.due_date && <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 flex items-center gap-1"><Icon name="clock" className="w-3 h-3"/> Due: {mat.due_date}</span>}
+                                              <h3 className="font-bold text-xl text-slate-800">{mat.title}</h3>
+                                              <div className="flex gap-2 items-center mt-2">
+                                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-widest ${isAssignment ? 'bg-blue-100/50 text-blue-700' : 'bg-emerald-100/50 text-emerald-700'}`}>{mType}</span>
+                                                {mat.due_date && <span className="text-[11px] font-bold text-rose-600 bg-rose-50/80 px-2.5 py-1 rounded-md border border-rose-100/50 flex items-center gap-1.5"><Icon name="clock" className="w-3.5 h-3.5"/> Due: {mat.due_date}</span>}
                                               </div>
                                             </div>
                                           </div>
-                                          {mat.description && <p className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">{mat.description}</p>}
+                                          {mat.description && <p className="text-sm text-slate-600 whitespace-pre-wrap bg-white/40 p-4 rounded-xl border border-white/60 mt-1 leading-relaxed">{mat.description}</p>}
                                           
                                           {/* Attachments Grid */}
                                           {mat.attachments?.length > 0 && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-200/50">
                                               {mat.attachments.map(att => {
                                                 const isDownloaded = att.status === 'complete' && att.local_path;
                                                 return (
-                                                  <div key={att.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isDownloaded ? 'border-slate-200 bg-white hover:border-blue-400 hover:shadow-md cursor-pointer hover:bg-blue-50/30' : 'border-dashed border-slate-200 bg-slate-50 opacity-60'} transition-all`}
+                                                  <div key={att.id} className={`group flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${isDownloaded ? 'border-white/60 bg-white/60 hover:bg-white hover:border-blue-300 hover:shadow-md cursor-pointer' : 'border-dashed border-slate-300/60 bg-slate-50/40 opacity-70'} `}
                                                     onClick={() => {
                                                       if (isDownloaded) {
                                                         fetch(`${API_BASE}/open`, {
@@ -340,13 +373,13 @@
                                                       }
                                                     }}
                                                   >
-                                                    <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${isDownloaded ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-400'}`}>
+                                                    <div className={`flex items-center justify-center w-11 h-11 rounded-xl shadow-sm transition-transform group-hover:scale-105 ${isDownloaded ? 'bg-gradient-to-br from-blue-50 to-white text-blue-600 border border-blue-100' : 'bg-slate-200/50 text-slate-400'}`}>
                                                       <Icon name={att.provider === 'youtube' ? 'youtube' : att.provider === 'form' ? 'form-input' : 'file-text'} className="h-5 w-5" />
                                                     </div>
                                                     <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                      <span className={`truncate text-sm font-semibold ${isDownloaded ? 'text-slate-900' : 'text-slate-500'}`} title={att.filename}>{att.filename}</span>
-                                                      <span className={`text-[11px] font-medium flex items-center gap-1 mt-0.5 ${isDownloaded ? 'text-blue-600' : 'text-slate-400'}`}>
-                                                        {isDownloaded ? <><Icon name="external-link" className="w-3 h-3"/> Click to open</> : 'Not downloaded'}
+                                                      <span className={`truncate text-sm font-semibold ${isDownloaded ? 'text-slate-800' : 'text-slate-500'}`} title={att.filename}>{att.filename}</span>
+                                                      <span className={`text-[11px] font-bold flex items-center gap-1 mt-0.5 tracking-wide ${isDownloaded ? 'text-blue-500' : 'text-slate-400'}`}>
+                                                        {isDownloaded ? <><Icon name="external-link" className="w-3 h-3"/> Click to open</> : 'Pending Download'}
                                                       </span>
                                                     </div>
                                                   </div>
@@ -359,7 +392,7 @@
                                     );
                                   })}
                                   {(!topic.materials || topic.materials.length === 0) && (
-                                    <div className="text-sm text-slate-500 italic p-6 bg-slate-50 rounded-xl border border-dashed border-slate-200 flex items-center gap-3">
+                                    <div className="text-sm text-slate-500 italic p-6 glass-card rounded-2xl border-dashed border-slate-300 flex items-center gap-3">
                                       <Icon name="inbox" className="w-5 h-5 text-slate-400"/> No items posted in this topic yet.
                                     </div>
                                   )}
@@ -374,49 +407,45 @@
                 )}
 
                 {activeTab === 'overview' && (
-                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                      <h2 className="mb-4 text-xl font-bold flex items-center gap-2"><Icon name="info" className="w-6 h-6 text-blue-500"/> Getting Started</h2>
-                      <p className="text-slate-600 mb-8 text-sm leading-relaxed max-w-3xl">
-                        Welcome! This dashboard lets you manage what you want to download from your Google Classroom. 
-                        It connects securely to your local database to view all discovered courses, topics, and materials.
-                        You can selectively exclude files before downloading.
+                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="glass-card rounded-3xl p-8 shadow-sm">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600 border border-blue-500/20"><Icon name="info" className="w-6 h-6"/></div>
+                        <h2 className="text-2xl font-bold text-slate-800">Getting Started</h2>
+                      </div>
+                      <p className="text-slate-600 mb-8 text-base leading-relaxed max-w-3xl font-medium bg-white/40 p-6 rounded-2xl border border-white/60">
+                        Welcome to the next generation of Classroom Downloader. This dashboard intelligently connects to your local engine to view all discovered courses, topics, and materials. You have full control over what is archived locally.
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white p-5 shadow-sm">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Icon name="library" className="w-4 h-4"/></div>
-                            <div className="text-sm font-medium text-slate-500">Available Courses</div>
+                        {[
+                          { label: 'Available Courses', value: getStats.courses, icon: 'library', color: 'blue' },
+                          { label: 'Total Available Items', value: getStats.items, icon: 'paperclip', color: 'purple' },
+                          { label: 'Total File Size (Est.)', value: bytesToSize(getStats.bytes), icon: 'hard-drive', color: 'emerald' }
+                        ].map((stat, i) => (
+                          <div key={i} className="rounded-2xl border border-white/60 bg-white/50 backdrop-blur-md p-6 shadow-sm hover:shadow-md transition-shadow group">
+                            <div className="flex items-center gap-4 mb-4">
+                              <div className={`p-3 bg-${stat.color}-500/10 rounded-xl text-${stat.color}-600 border border-${stat.color}-500/20 group-hover:scale-110 transition-transform`}><Icon name={stat.icon} className="w-5 h-5"/></div>
+                              <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">{stat.label}</div>
+                            </div>
+                            <div className="text-4xl font-extrabold text-slate-800 tracking-tight">{stat.value}</div>
                           </div>
-                          <div className="text-3xl font-bold text-slate-900">{getStats.courses}</div>
-                        </div>
-                        <div className="rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white p-5 shadow-sm">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-purple-100 rounded-lg text-purple-600"><Icon name="paperclip" className="w-4 h-4"/></div>
-                            <div className="text-sm font-medium text-slate-500">Total Available Items</div>
-                          </div>
-                          <div className="text-3xl font-bold text-slate-900">{getStats.items}</div>
-                        </div>
-                        <div className="rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white p-5 shadow-sm">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><Icon name="hard-drive" className="w-4 h-4"/></div>
-                            <div className="text-sm font-medium text-slate-500">Total File Size (Est.)</div>
-                          </div>
-                          <div className="text-3xl font-bold text-slate-900">{bytesToSize(getStats.bytes)}</div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                     
-                    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                      <h3 className="font-bold flex items-center gap-2 mb-4 text-slate-800"><Icon name="play-circle" className="w-5 h-5 text-amber-500"/> Actions</h3>
+                    <div className="glass-card rounded-3xl p-8 shadow-sm">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-600 border border-amber-500/20"><Icon name="play-circle" className="w-6 h-6"/></div>
+                        <h3 className="text-2xl font-bold text-slate-800">Quick Actions</h3>
+                      </div>
                       <div className="flex flex-wrap gap-4">
-                        <button onClick={handleTriggerRefreshPlan} className="flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-5 py-2.5 font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
+                        <button onClick={handleTriggerRefreshPlan} className="flex items-center gap-2 rounded-xl bg-white/80 border border-white px-6 py-3 font-semibold text-slate-700 shadow-sm hover:bg-white transition-all active:scale-95 hover:shadow-md">
                           <Icon name="refresh-cw" className="w-4 h-4"/> Sync Classroom Data
                         </button>
-                        <button id="save-btn-top" onClick={handleSaveSelection} className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white shadow-sm hover:bg-blue-700 hover:shadow transition-all active:scale-95">
+                        <button id="save-btn-overview" data-orig-class="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all active:scale-95" onClick={() => handleSaveSelection('save-btn-overview')} className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all active:scale-95">
                           <Icon name="save" className="w-4 h-4"/> Save Download Plan
                         </button>
-                        <button onClick={handleStartDownload} className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 font-medium text-white shadow-sm hover:bg-emerald-700 hover:shadow-md transition-all active:scale-95">
+                        <button onClick={handleStartDownload} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-lg transition-all active:scale-95">
                           <Icon name="download" className="w-4 h-4"/> Start Downloading
                         </button>
                       </div>
@@ -425,18 +454,18 @@
                 )}
 
                 {activeTab === 'courses' && plan && (
-                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex items-center justify-between border-b pb-4">
+                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between glass-card p-6 rounded-3xl border-white/60 gap-4">
                       <div>
                         <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Select Files to Download</h2>
-                        <p className="text-sm text-slate-500 mt-1">Review the materials below. Uncheck anything you don't want to download.</p>
+                        <p className="text-sm text-slate-500 mt-1 font-medium">Review the materials below. Uncheck anything you don't want to download.</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <button 
                           onClick={() => setSelection(prev => ({ ...prev, excluded_attachment_ids: [] }))} 
-                          className="flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
+                          className="flex items-center gap-2 rounded-xl bg-white/70 border border-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-white transition-all active:scale-95"
                         >
-                          <Icon name="check-square" className="w-4 h-4"/> Select All
+                          <Icon name="check-square" className="w-4 h-4 text-emerald-500"/> Select All
                         </button>
                         <button 
                            onClick={() => {
@@ -444,11 +473,11 @@
                              plan.courses?.forEach(c => c.topics?.forEach(t => t.materials?.forEach(m => m.attachments?.forEach(a => allIds.push(a.id)))));
                              setSelection(prev => ({ ...prev, excluded_attachment_ids: allIds }));
                            }} 
-                           className="flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
+                           className="flex items-center gap-2 rounded-xl bg-white/70 border border-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-white transition-all active:scale-95"
                         >
-                          <Icon name="x-square" className="w-4 h-4"/> Deselect All
+                          <Icon name="x-square" className="w-4 h-4 text-red-500"/> Deselect All
                         </button>
-                        <button id="save-btn-top-2" onClick={handleSaveSelection} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-all">
+                        <button id="save-btn-plan" data-orig-class="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95" onClick={() => handleSaveSelection('save-btn-plan')} className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95">
                           <Icon name="save" className="w-4 h-4"/> Save Plan
                         </button>
                       </div>
@@ -465,18 +494,18 @@
                         const courseFullyEmpty = totalCourse > 0 && selectedCourse === 0;
 
                         return (
-                        <details key={course.id} className="group rounded-xl border border-slate-200 bg-white shadow-sm transition-all overflow-hidden [&_summary::-webkit-details-marker]:hidden">
-                          <summary className="flex cursor-pointer items-center justify-between p-5 bg-slate-50 hover:bg-slate-100/80 transition-colors border-b border-transparent group-open:border-slate-200">
+                        <details key={course.id} className="group glass-card rounded-2xl overflow-hidden transition-all duration-300 [&_summary::-webkit-details-marker]:hidden">
+                          <summary className="flex cursor-pointer items-center justify-between p-6 bg-white/30 hover:bg-white/60 transition-colors border-b border-transparent group-open:border-white/50">
                             <div className="flex items-center gap-4">
-                              <h3 className={`font-bold text-lg ${courseFullyEmpty ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{course.name}</h3>
-                              <span className="rounded-full bg-white border border-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-600 shadow-sm">{course.teacher}</span>
+                              <h3 className={`font-bold text-xl ${courseFullyEmpty ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{course.name}</h3>
+                              <span className="rounded-lg bg-white/60 border border-white px-3 py-1 text-xs font-bold text-slate-600 shadow-sm backdrop-blur-md">{course.teacher}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-slate-400">
-                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shadow-sm ${courseFullySelected ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : courseFullyEmpty ? 'bg-red-50 text-red-400 border-red-100' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                            <div className="flex items-center gap-4 text-slate-400">
+                              <span className={`text-xs font-bold px-3 py-1 rounded-lg border shadow-sm backdrop-blur-md ${courseFullySelected ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20' : courseFullyEmpty ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-700 border-blue-500/20'}`}>
                                 {selectedCourse} / {totalCourse} items
                               </span>
                               {totalCourse > 0 && (
-                                <div className="flex items-center gap-1 mr-2 opacity-60 hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button onClick={(e) => {
                                     e.preventDefault(); e.stopPropagation();
                                     setSelection(prev => {
@@ -484,7 +513,7 @@
                                       allCourseAtts.forEach(id => excl.delete(id));
                                       return { ...prev, excluded_attachment_ids: [...excl] };
                                     });
-                                  }} className="px-2 py-1 text-[10px] uppercase font-bold rounded bg-slate-200 text-slate-600 hover:bg-emerald-500 hover:text-white transition">All</button>
+                                  }} className="px-2 py-1 text-[10px] uppercase font-bold rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-sm">All</button>
                                   <button onClick={(e) => {
                                     e.preventDefault(); e.stopPropagation();
                                     setSelection(prev => {
@@ -492,19 +521,19 @@
                                       allCourseAtts.forEach(id => excl.add(id));
                                       return { ...prev, excluded_attachment_ids: [...excl] };
                                     });
-                                  }} className="px-2 py-1 text-[10px] uppercase font-bold rounded bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white transition">None</button>
+                                  }} className="px-2 py-1 text-[10px] uppercase font-bold rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm">None</button>
                                 </div>
                               )}
-                              <span className="text-xs font-medium border-l pl-3 border-slate-200">{course.topics?.length || 0} topics</span>
-                              <div className="w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center group-open:rotate-180 transition duration-300">
+                              <span className="text-sm font-semibold border-l border-slate-300 pl-4">{course.topics?.length || 0} topics</span>
+                              <div className="w-8 h-8 rounded-full bg-white/80 shadow-sm flex items-center justify-center group-open:rotate-180 transition duration-300">
                                 <Icon name="chevron-down" className="h-4 w-4 text-slate-600" />
                               </div>
                             </div>
                           </summary>
                           
-                          <div className="flex flex-col divide-y divide-slate-100 bg-white">
+                          <div className="flex flex-col divide-y divide-slate-200/50 bg-white/20 backdrop-blur-md">
                             {(course.topics || []).length === 0 ? (
-                               <div className="p-8 text-center text-slate-500 text-sm">No topics or materials found for this course.</div>
+                               <div className="p-8 text-center text-slate-500 font-medium">No topics or materials found for this course.</div>
                             ) : null}
                             {course.topics?.map(topic => {
                               const allTopicAtts = [];
@@ -516,65 +545,65 @@
                               const topicFullyEmpty = totalTopic > 0 && selectedTopic === 0;
 
                               return (
-                              <div key={topic.id} className="p-5 hover:bg-slate-50/50 transition-colors">
-                                <div className="flex items-center justify-between mb-3">
-                                  <h4 className={`text-sm font-bold flex items-center gap-2 ${topicFullyEmpty ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                                    <Icon name={topicFullySelected ? "check-circle" : "folder"} className={`w-4 h-4 ${topicFullySelected ? 'text-emerald-500' : 'text-slate-400'}`}/>
+                              <div key={topic.id} className="p-6 hover:bg-white/40 transition-colors">
+                                <div className="flex items-center justify-between mb-4">
+                                  <h4 className={`text-base font-bold flex items-center gap-2 ${topicFullyEmpty ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                                    <Icon name={topicFullySelected ? "check-circle" : "folder"} className={`w-5 h-5 ${topicFullySelected ? 'text-emerald-500' : 'text-slate-400'}`}/>
                                     {topic.title || 'General'}
                                   </h4>
                                   <div className="flex items-center gap-3">
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${topicFullySelected ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : topicFullyEmpty ? 'bg-red-50 text-red-400 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+                                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md border ${topicFullySelected ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : topicFullyEmpty ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-600 border-blue-500/20'}`}>
                                       {selectedTopic}/{totalTopic}
                                     </span>
                                     {totalTopic > 0 && (
-                                      <div className="flex items-center gap-1">
+                                      <div className="flex items-center gap-1.5">
                                         <button onClick={() => {
                                           setSelection(prev => {
                                             const excl = new Set(prev.excluded_attachment_ids || []);
                                             allTopicAtts.forEach(id => excl.delete(id));
                                             return { ...prev, excluded_attachment_ids: [...excl] };
                                           });
-                                        }} className="px-1.5 py-0.5 text-[10px] uppercase font-bold rounded bg-slate-100 text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 transition">All</button>
+                                        }} className="px-2 py-1 text-[10px] uppercase font-bold rounded-md bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-sm">All</button>
                                         <button onClick={() => {
                                           setSelection(prev => {
                                             const excl = new Set(prev.excluded_attachment_ids || []);
                                             allTopicAtts.forEach(id => excl.add(id));
                                             return { ...prev, excluded_attachment_ids: [...excl] };
                                           });
-                                        }} className="px-1.5 py-0.5 text-[10px] uppercase font-bold rounded bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-700 transition">None</button>
+                                        }} className="px-2 py-1 text-[10px] uppercase font-bold rounded-md bg-white border border-slate-200 text-slate-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm">None</button>
                                       </div>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex flex-col gap-3 pl-6">
+                                <div className="flex flex-col gap-4 pl-7">
                                   {Object.entries((topic.materials || []).reduce((acc, mat) => {
                                     const t = mat.type ? mat.type.toLowerCase() : 'other';
                                     if (!acc[t]) acc[t] = [];
                                     acc[t].push(mat);
                                     return acc;
                                   }, {})).map(([mType, mats], idx) => (
-                                    <div key={mType} className={`flex flex-col gap-3 ${idx > 0 ? 'mt-4 pt-4 border-t border-slate-100' : ''}`}>
-                                      <h5 className="text-[10px] items-center gap-1.5 uppercase font-bold text-slate-400 flex tracking-widest pl-1">
-                                        {mType === 'assignment' ? <Icon name="clipboard-check" className="w-3.5 h-3.5"/> :
-                                         mType === 'material' ? <Icon name="book-open" className="w-3.5 h-3.5"/> :
-                                         <Icon name="file-question" className="w-3.5 h-3.5"/>}
+                                    <div key={mType} className={`flex flex-col gap-3 ${idx > 0 ? 'mt-4 pt-4 border-t border-slate-200/60' : ''}`}>
+                                      <h5 className="text-[11px] items-center gap-2 uppercase font-extrabold text-slate-500 flex tracking-widest pl-1">
+                                        {mType === 'assignment' ? <Icon name="clipboard-check" className="w-4 h-4 text-blue-400"/> :
+                                         mType === 'material' ? <Icon name="book-open" className="w-4 h-4 text-emerald-400"/> :
+                                         <Icon name="file-question" className="w-4 h-4 text-purple-400"/>}
                                         {mType}s
                                       </h5>
                                       {mats.map(mat => (
-                                        <div key={mat.id} className={`rounded-lg border p-4 bg-white shadow-sm border-l-4 ${mType === 'assignment' ? 'border-l-blue-500 border-slate-200' : mType === 'material' ? 'border-l-emerald-500 border-slate-200' : 'border-l-purple-500 border-slate-200'}`}>
+                                        <div key={mat.id} className={`rounded-xl border border-white/60 p-5 bg-white/70 shadow-sm border-l-4 hover:shadow-md transition-shadow ${mType === 'assignment' ? 'border-l-blue-500' : mType === 'material' ? 'border-l-emerald-500' : 'border-l-purple-500'}`}>
                                           <div className="flex items-center gap-3 mb-3">
-                                            <span className="text-sm font-semibold text-slate-800">{mat.title}</span>
+                                            <span className="text-base font-bold text-slate-800">{mat.title}</span>
                                           </div>
                                           
-                                          <div className="flex flex-col gap-2 pl-2">
+                                          <div className="flex flex-col gap-2.5 pl-2">
                                             {mat.attachments?.map(att => {
                                               const isExcluded = selection?.excluded_attachment_ids?.includes(att.id);
                                               return (
-                                              <label key={att.id} className={`flex items-center gap-3 text-sm p-2 rounded-md transition-colors cursor-pointer border border-transparent ${isExcluded ? 'opacity-60 bg-red-50/30 line-through text-slate-400' : 'hover:bg-slate-50 text-slate-700'}`}>
+                                              <label key={att.id} className={`flex items-center gap-4 text-sm p-2.5 rounded-xl transition-all duration-200 cursor-pointer border ${isExcluded ? 'opacity-60 bg-slate-100/50 border-transparent text-slate-400' : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm text-slate-800'}`}>
                                                 <input 
                                                   type="checkbox" 
                                                   checked={!isExcluded} 
-                                                  className="rounded border-slate-300 w-4 h-4 text-blue-600 focus:ring-blue-600 focus:ring-offset-0 disabled:opacity-50"
+                                                  className="rounded-md border-slate-300 w-4.5 h-4.5 text-blue-600 focus:ring-blue-600 focus:ring-offset-0 disabled:opacity-50 cursor-pointer"
                                                   onChange={(e) => {
                                                     const checked = e.target.checked;
                                                     setSelection(prev => {
@@ -589,15 +618,15 @@
                                                     });
                                                   }}
                                                 />
-                                                <div className="flex items-center justify-center w-6 h-6 rounded bg-slate-100 text-slate-500">
-                                                  <Icon name={att.provider === 'youtube' ? 'youtube' : att.provider === 'form' ? 'form-input' : 'file-text'} className="h-3.5 w-3.5" />
+                                                <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${isExcluded ? 'bg-slate-200/50 text-slate-400' : 'bg-blue-50 text-blue-600'}`}>
+                                                  <Icon name={att.provider === 'youtube' ? 'youtube' : att.provider === 'form' ? 'form-input' : 'file-text'} className="h-4 w-4" />
                                                 </div>
-                                                <span className="truncate flex-1 font-medium">{att.filename}</span>
-                                                <span className="text-xs text-slate-400 font-mono bg-slate-50 px-2 py-1 flex items-center justify-center rounded border border-slate-100 tracking-tight">{bytesToSize(att.size_bytes)}</span>
+                                                <span className={`truncate flex-1 font-semibold ${isExcluded ? 'line-through' : ''}`}>{att.filename}</span>
+                                                <span className="text-[11px] text-slate-500 font-bold bg-slate-100/80 px-2.5 py-1 flex items-center justify-center rounded-md border border-slate-200/60 tracking-tight">{bytesToSize(att.size_bytes)}</span>
                                               </label>
                                             )})}
                                             {(!mat.attachments || mat.attachments.length === 0) && (
-                                              <span className="text-xs text-slate-400 italic bg-slate-50 rounded p-2 text-center border border-dashed border-slate-200">No attachments provided</span>
+                                              <span className="text-xs text-slate-400 font-medium italic bg-white/50 rounded-lg p-3 text-center border border-dashed border-slate-300">No attachments provided</span>
                                             )}
                                           </div>
                                         </div>
@@ -618,73 +647,73 @@
                 )}
 
                 {activeTab === 'settings' && (
-                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight border-b pb-4">System Details</h2>
+                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
+                    <h2 className="text-3xl font-bold text-slate-800 tracking-tight pb-2">System Details</h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-3 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
-                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                             <Icon name="folder-tree" className="h-5 w-5" />
+                      <div className="glass-card rounded-3xl p-8 flex flex-col gap-4 hover:shadow-lg transition-shadow border-white/60">
+                        <div className="flex items-center gap-4">
+                           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 border border-blue-200">
+                             <Icon name="folder-tree" className="h-6 w-6" />
                            </div>
-                           <h3 className="font-bold text-slate-800 text-lg">System Layout</h3>
+                           <h3 className="font-extrabold text-slate-800 text-xl">System Layout</h3>
                         </div>
-                        <p className="text-sm text-slate-600 leading-relaxed mt-2">
+                        <p className="text-base text-slate-600 leading-relaxed font-medium mt-2">
                            All your data stays entirely on your local machine.
-                           By default, everything is saved directly into the <code>./output/</code> folder in this project's directory.
+                           By default, everything is saved directly into the <code className="bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200">./output/</code> folder in this project's directory.
                         </p>
-                        <div className="mt-4 pt-4 border-t border-slate-100">
-                          <ul className="text-sm font-mono flex flex-col gap-2">
-                            <li className="flex items-center gap-2"><Icon name="file-json" className="h-3.5 w-3.5 text-slate-400"/> ./output/master_index.json</li>
-                            <li className="flex items-center gap-2"><Icon name="database" className="h-3.5 w-3.5 text-slate-400"/> ./database/classroom.db</li>
-                            <li className="flex items-center gap-2"><Icon name="files" className="h-3.5 w-3.5 text-slate-400"/> ./output/courses/*</li>
+                        <div className="mt-auto pt-5 border-t border-slate-200/60">
+                          <ul className="text-sm font-mono flex flex-col gap-3 font-semibold text-slate-600">
+                            <li className="flex items-center gap-3"><span className="p-1.5 bg-slate-100 rounded-md border border-slate-200"><Icon name="file-json" className="h-4 w-4"/></span> ./output/master_index.json</li>
+                            <li className="flex items-center gap-3"><span className="p-1.5 bg-slate-100 rounded-md border border-slate-200"><Icon name="database" className="h-4 w-4"/></span> ./database/classroom.db</li>
+                            <li className="flex items-center gap-3"><span className="p-1.5 bg-slate-100 rounded-md border border-slate-200"><Icon name="files" className="h-4 w-4"/></span> ./output/courses/*</li>
                           </ul>
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-3 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
-                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-                             <Icon name="shield-check" className="h-5 w-5" />
+                      <div className="glass-card rounded-3xl p-8 flex flex-col gap-4 hover:shadow-lg transition-shadow border-white/60">
+                        <div className="flex items-center gap-4">
+                           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600 border border-emerald-200">
+                             <Icon name="shield-check" className="h-6 w-6" />
                            </div>
-                           <h3 className="font-bold text-slate-800 text-lg">Smart Downloading</h3>
+                           <h3 className="font-extrabold text-slate-800 text-xl">Smart Downloading</h3>
                         </div>
-                        <p className="text-sm text-slate-600 leading-relaxed mt-2">
-                          The downloader remembers what it has already grabbed. 
+                        <p className="text-base text-slate-600 leading-relaxed font-medium mt-2">
+                          The downloader remembers what it has already grabbed using an intelligent caching mechanism.
                         </p>
-                        <p className="text-sm text-slate-600 leading-relaxed">
-                          If you restart the downloader, it will automatically skip files it has already saved locally. This saves time and bandwidth!
+                        <p className="text-base text-slate-600 leading-relaxed font-medium bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                          If you restart the downloader, it will automatically skip files it has already saved locally. This saves significant time and bandwidth!
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-3 hover:shadow-md transition-shadow md:col-span-2">
+                      <div className="glass-card rounded-3xl p-8 flex flex-col gap-4 hover:shadow-lg transition-shadow md:col-span-2 border-white/60">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
-                              <Icon name="hard-drive" className="h-5 w-5" />
+                          <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-orange-50 text-orange-600 border border-orange-200">
+                              <Icon name="hard-drive" className="h-6 w-6" />
                             </div>
-                            <h3 className="font-bold text-slate-800 text-lg">Recently Downloaded Files</h3>
+                            <h3 className="font-extrabold text-slate-800 text-xl">Recently Downloaded Files</h3>
                           </div>
-                          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{dbFiles?.filter(f => f.status === 'complete').length || 0} items</span>
+                          <span className="text-sm font-bold text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">{dbFiles?.filter(f => f.status === 'complete').length || 0} items locally</span>
                         </div>
-                        <div className="mt-4 border rounded-lg bg-slate-50 overflow-hidden">
+                        <div className="mt-4 border border-white/60 rounded-2xl bg-white/50 backdrop-blur-sm overflow-hidden shadow-inner">
                           <div className="max-h-[400px] overflow-y-auto w-full text-sm font-mono whitespace-nowrap">
-                            <table className="w-full text-left">
-                              <thead className="bg-white border-b sticky top-0 shadow-sm z-10">
+                            <table className="w-full text-left border-collapse">
+                              <thead className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 shadow-sm z-10">
                                 <tr>
-                                  <th className="px-4 py-3 font-semibold text-slate-600 w-1/4">Course</th>
-                                  <th className="px-4 py-3 font-semibold text-slate-600 w-1/3">File Name</th>
-                                  <th className="px-4 py-3 font-semibold text-slate-600">Local Path</th>
+                                  <th className="px-5 py-4 font-bold text-slate-700 w-1/4 uppercase tracking-wider text-xs">Course</th>
+                                  <th className="px-5 py-4 font-bold text-slate-700 w-1/3 uppercase tracking-wider text-xs">File Name</th>
+                                  <th className="px-5 py-4 font-bold text-slate-700 uppercase tracking-wider text-xs">Local Path</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-slate-200">
+                              <tbody className="divide-y divide-slate-200/60 font-medium">
                                 {!dbFiles || dbFiles.filter(f => f.status === 'complete').length === 0 ? (
-                                  <tr><td colSpan="3" className="px-4 py-8 text-center text-slate-500 italic bg-white">No files downloaded yet. Start downloading to see them here!</td></tr>
+                                  <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-500 italic bg-white/40">No files downloaded yet. Start downloading to see them here!</td></tr>
                                 ) : dbFiles.filter(f => f.status === 'complete').map(f => (
-                                  <tr key={f.id} className="hover:bg-white transition-colors">
-                                    <td className="px-4 py-2 text-slate-600 truncate max-w-[200px]" title={f.course_name}>{f.course_name}</td>
-                                    <td className="px-4 py-2 font-medium text-slate-800 truncate max-w-[300px]" title={f.filename}>{f.filename}</td>
-                                    <td className="px-4 py-2 text-slate-500 truncate max-w-[400px]" title={f.local_path}>{f.local_path}</td>
+                                  <tr key={f.id} className="hover:bg-white/80 transition-colors">
+                                    <td className="px-5 py-3 text-slate-600 truncate max-w-[200px]" title={f.course_name}>{f.course_name}</td>
+                                    <td className="px-5 py-3 font-semibold text-slate-800 truncate max-w-[300px]" title={f.filename}>{f.filename}</td>
+                                    <td className="px-5 py-3 text-slate-500 truncate max-w-[400px]" title={f.local_path}>{f.local_path}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -693,19 +722,20 @@
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm flex flex-col gap-3 md:col-span-2">
-                        <div className="flex items-center gap-3">
-                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-red-600">
-                             <Icon name="alert-triangle" className="h-5 w-5" />
+                      <div className="rounded-3xl border border-red-200 bg-gradient-to-br from-red-50 to-white p-8 shadow-sm flex flex-col gap-4 md:col-span-2 relative overflow-hidden group">
+                        <div className="absolute -right-10 -bottom-10 opacity-5 group-hover:scale-110 transition-transform duration-500"><Icon name="alert-triangle" className="w-64 h-64 text-red-500"/></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-600 border border-red-200">
+                             <Icon name="alert-triangle" className="h-6 w-6" />
                            </div>
-                           <h3 className="font-bold text-red-800 text-lg">Danger Zone</h3>
+                           <h3 className="font-extrabold text-red-800 text-xl">Danger Zone</h3>
                         </div>
-                        <p className="text-sm text-red-700 leading-relaxed mt-2">
+                        <p className="text-base text-red-700 leading-relaxed font-medium mt-2 max-w-4xl relative z-10">
                           Need to test the downloader from scratch? You can factory reset the local database. 
-                          This deletes the index of what has been downloaded, but it <b>does not</b> delete your actual files on disk.
+                          This deletes the index of what has been downloaded, but it <b className="font-extrabold bg-red-100 px-1 rounded">does not</b> delete your actual files on disk.
                         </p>
-                        <div className="mt-2">
-                          <button onClick={handleResetDatabase} className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 font-medium text-white shadow-sm hover:bg-red-700 transition-all active:scale-95">
+                        <div className="mt-4 relative z-10">
+                          <button onClick={handleResetDatabase} className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 font-bold text-white shadow-md shadow-red-500/20 hover:bg-red-700 transition-all active:scale-95 hover:shadow-lg">
                             <Icon name="trash-2" className="w-4 h-4"/> Factory Reset Database
                           </button>
                         </div>

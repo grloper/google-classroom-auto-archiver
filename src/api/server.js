@@ -78,11 +78,36 @@ async function main() {
     const db = new ArchiveDatabase(config.paths.dbPath);
 
     try {
-      if (url.pathname === '/' && method === 'GET') {
-        const htmlPath = path.join(__dirname, 'ui', 'index.html');
-        if (fs.existsSync(htmlPath)) {
-          response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-          fs.createReadStream(htmlPath).pipe(response);
+      if (method === 'GET') {
+        let reqPath = url.pathname === '/' ? '/index.html' : url.pathname;
+        const filePath = path.join(__dirname, 'ui', reqPath);
+        
+        // Prevent directory traversal
+        const normalizedBase = path.normalize(path.join(__dirname, 'ui'));
+        const normalizedPath = path.normalize(filePath);
+        
+        if (normalizedPath.startsWith(normalizedBase) && fs.existsSync(normalizedPath) && fs.statSync(normalizedPath).isFile()) {
+          const ext = path.extname(normalizedPath).toLowerCase();
+          const mimeTypes = {
+            '.html': 'text/html',
+            '.js': 'text/javascript',
+            '.css': 'text/css',
+            '.json': 'application/json',
+            '.png': 'image/png',
+            '.jpg': 'image/jpg',
+            '.gif': 'image/gif',
+            '.svg': 'image/svg+xml',
+            '.wav': 'audio/wav',
+            '.mp4': 'video/mp4',
+            '.woff': 'application/font-woff',
+            '.ttf': 'application/font-ttf',
+            '.eot': 'application/vnd.ms-fontobject',
+            '.otf': 'application/font-otf',
+            '.wasm': 'application/wasm'
+          };
+          const contentType = mimeTypes[ext] || 'application/octet-stream';
+          response.writeHead(200, { 'content-type': contentType + '; charset=utf-8' });
+          fs.createReadStream(normalizedPath).pipe(response);
           return;
         }
       }
@@ -147,7 +172,7 @@ async function main() {
         if (body && body.id) {
           const row = db.db.prepare('SELECT local_path FROM attachments WHERE id = ?').get(body.id);
           if (row && row.local_path) {
-            const absolutePath = path.resolve(process.cwd(), row.local_path);
+            const absolutePath = path.resolve(config.paths.outputRoot, row.local_path);
             if (fs.existsSync(absolutePath)) {
               const { default: openSys } = await import('open');
               await openSys(absolutePath);
