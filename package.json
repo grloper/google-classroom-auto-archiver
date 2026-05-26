@@ -1,6 +1,6 @@
 {
   "name": "google-classroom-auto-archiver",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Automatic Google Classroom crawler, Drive downloader, and migration archive exporter.",
   "type": "module",
   "private": true,
