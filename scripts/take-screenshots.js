@@ -19,9 +19,9 @@ import fs from 'fs';
               materials: [
                 {
                   id: 'm1', title: 'System Design Project', type: 'Assignment', due_date: 'Oct 15',
-                  description: 'Create a UML diagram for the proposed architecture.',
+                  description: 'Create a UML diagram for the proposed architecture.\nEnsure you cover both client and server components.',
                   attachments: [
-                    { id: 'a1', filename: 'requirements.pdf', status: 'complete', local_path: '/dummy/path/requirements.pdf', provider: 'file' }
+                    { id: 'a1', filename: 'requirements.pdf', status: 'complete', local_path: '/local/archive/c1/requirements.pdf', provider: 'file', size_bytes: 2048000 }
                   ]
                 }
               ]
@@ -56,26 +56,36 @@ import fs from 'fs';
   await page.route('**/selection', route => route.fulfill({ json: { selection_mode: 'implicit', excluded_attachment_ids: [] } }));
   await page.route('**/db/files', route => route.fulfill({
     json: [
-      { id: 'a1', filename: 'requirements.pdf', status: 'complete', local_path: '/dummy/path/requirements.pdf', course_name: 'Software Engineering 101' }
+      { id: 'a1', filename: 'requirements.pdf', status: 'complete', local_path: '/local/archive/c1/requirements.pdf', course_name: 'Software Engineering 101' }
     ]
   }));
 
   console.log('Navigating to UI...');
   await page.goto('http://127.0.0.1:4317');
   
-  await page.waitForTimeout(2000); // Wait for React render
+  await page.waitForTimeout(3000); // Wait for React render and health check
 
   fs.mkdirSync('docs/assets', { recursive: true });
 
-  console.log('Capturing Classroom view...');
-  await page.click('text=My Classroom');
+  console.log('Capturing Archive view...');
+  await page.click('text=THE_ARCHIVE');
   await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'docs/assets/classroom-view.png' });
+  await page.screenshot({ path: 'docs/assets/ui-archive.png' });
 
-  console.log('Capturing Settings view...');
-  await page.click('text=System Details');
+  console.log('Capturing Telemetry view...');
+  await page.click('text=TELEMETRY');
   await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'docs/assets/settings-reset.png' });
+  await page.screenshot({ path: 'docs/assets/ui-telemetry.png' });
+
+  console.log('Capturing Download Plan view...');
+  await page.click('text=DL_PLAN');
+  await page.waitForTimeout(1000);
+  await page.screenshot({ path: 'docs/assets/ui-dl-plan.png' });
+
+  console.log('Capturing Config view...');
+  await page.click('text=CONFIG');
+  await page.waitForTimeout(1000);
+  await page.screenshot({ path: 'docs/assets/ui-config.png' });
 
   await browser.close();
   console.log('Screenshots saved to docs/assets/');

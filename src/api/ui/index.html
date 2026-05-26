@@ -3,14 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Classroom Downloader Dashboard</title>
+  <title>ARCHIVE // Classroom Downloader</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+          fontFamily: {
+            display: ['Syncopate', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            dark: '#050505',
+            panel: '#0f0f0f',
+            accent: '#FF5500',
+            success: '#00FF66',
+            muted: '#333333',
+            textmain: '#E0E0E0',
+            textmuted: '#888888',
+          },
+          animation: {
+            'glitch': 'glitch 0.2s linear infinite',
+            'blink': 'blink 1s step-end infinite',
+          },
+          keyframes: {
+            glitch: {
+              '0%': { transform: 'translate(0)' },
+              '20%': { transform: 'translate(-2px, 2px)' },
+              '40%': { transform: 'translate(-2px, -2px)' },
+              '60%': { transform: 'translate(2px, 2px)' },
+              '80%': { transform: 'translate(2px, -2px)' },
+              '100%': { transform: 'translate(0)' }
+            },
+            blink: {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '0' },
+            }
+          }
         }
       }
     }
@@ -22,44 +52,135 @@
 
   <!-- Load Canvas Background Animation -->
   <script src="/canvas.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
-    body { background-color: #eef2f6; color: #0f172a; margin: 0; overflow: hidden; }
+    body { 
+      background-color: #050505; 
+      color: #E0E0E0; 
+      margin: 0; 
+      overflow: hidden; 
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
     #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
     
-    /* Clean custom scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.5); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #050505; border-left: 1px solid #333; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: #FF5500; }
 
-    /* Glassmorphism utilities */
-    .glass-panel {
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-    }
-    
-    .glass-card {
-      background: rgba(255, 255, 255, 0.85);
+    /* Industrial/Brutalist Utilities */
+    .brutal-panel {
+      background: rgba(10, 10, 10, 0.9);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.04);
+      border: 1px solid #333;
     }
     
-    .glass-header {
-      background: rgba(255, 255, 255, 0.65);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    .brutal-header {
+      background: rgba(5, 5, 5, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #333;
+    }
+    
+    .brutal-btn {
+      background: transparent;
+      border: 1px solid #FF5500;
+      color: #FF5500;
+      transition: all 0.15s ease;
+      text-transform: uppercase;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .brutal-btn:hover:not(:disabled) {
+      background: #FF5500;
+      color: #050505;
+      box-shadow: 4px 4px 0px 0px rgba(255,85,0,0.4);
+      transform: translate(-2px, -2px);
+    }
+    .brutal-btn:active:not(:disabled) {
+      transform: translate(0px, 0px);
+      box-shadow: none;
+    }
+    .brutal-btn.success {
+      border-color: #00FF66;
+      color: #00FF66;
+    }
+    .brutal-btn.success:hover:not(:disabled) {
+      background: #00FF66;
+      color: #050505;
+      box-shadow: 4px 4px 0px 0px rgba(0,255,102,0.4);
+    }
+    .brutal-btn.danger {
+      border-color: #FF0033;
+      color: #FF0033;
+    }
+    .brutal-btn.danger:hover:not(:disabled) {
+      background: #FF0033;
+      color: #050505;
+      box-shadow: 4px 4px 0px 0px rgba(255,0,51,0.4);
+    }
+    .brutal-btn.secondary {
+      border-color: #E0E0E0;
+      color: #E0E0E0;
+    }
+    .brutal-btn.secondary:hover:not(:disabled) {
+      background: #E0E0E0;
+      color: #050505;
+      box-shadow: 4px 4px 0px 0px rgba(224,224,224,0.4);
+    }
+
+    .brutal-select {
+      background: #050505;
+      color: #E0E0E0;
+      border: 1px solid #333;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+    }
+    .brutal-select:focus {
+      border-color: #FF5500;
+    }
+
+    .noise-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     }
 
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
+    
+    .scanline {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 85, 0, 0.3);
+      opacity: 0.5;
+      animation: scan 8s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes scan {
+      0% { top: -5%; }
+      100% { top: 105%; }
+    }
   </style>
 </head>
 <body>
+  <div class="noise-overlay"></div>
   <canvas id="bg-canvas"></canvas>
   <div id="root"></div>
 
@@ -83,14 +204,13 @@
     }
 
     function bytesToSize(bytes) {
-      if (!bytes) return 'Unknown';
-      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-      if (bytes === 0) return '0 Byte';
+      if (!bytes) return 'UNKNOWN';
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      if (bytes === 0) return '0 B';
       const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
       return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
     }
 
-    // Determine base API URL dynamically based on where the UI is served from
     const API_BASE = window.location.origin;
 
     function App() {
@@ -127,7 +247,7 @@
           if (resCourses.ok) setCoursesData(await resCourses.json());
         } catch (e) {
           setApiStatus({ online: false, counts: null });
-          console.error("API not available", e);
+          console.error("SYS.ERR: API OFFLINE", e);
         }
         if (!silent) setLoading(false);
       };
@@ -164,7 +284,7 @@
 
       const handleTriggerRefreshPlan = async () => {
         await fetch(`${API_BASE}/plan/refresh`, { method: 'POST' });
-        alert('Crawl command sent to sync Classroom. Monitor terminal for metadata generation progress, then refresh this page.');
+        alert('CMD: SYNC_CLASSROOM_DATA DISPATCHED. MONITOR TERMINAL.');
       };
 
       const handleSaveSelection = async (btnId) => {
@@ -175,10 +295,10 @@
         const includedCount = totalCount - excludedCount;
 
         const confirmed = window.confirm(
-          `Are you sure you want to save this download plan?\n\n` +
-          `✅ Included: ${includedCount} items\n` +
-          `❌ Excluded: ${excludedCount} items\n\n` +
-          `Excluded items will be skipped during the next download cycle. You can change this at any time.`
+          `[ CONFIRM ACTION: SAVE_PLAN ]\n\n` +
+          `+ INCLUDED : ${includedCount}\n` +
+          `- EXCLUDED : ${excludedCount}\n\n` +
+          `PROCEED?`
         );
 
         if (!confirmed) return;
@@ -194,206 +314,251 @@
         const btn = document.getElementById(btnId);
         if(!btn) return;
         const origText = btn.innerHTML;
-        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> Saved Successfully!`;
-        btn.classList.add('bg-emerald-500', 'text-white', 'border-emerald-600');
-        btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-700', 'bg-white', 'text-slate-700');
+        btn.innerHTML = `[ <i data-lucide="check" class="w-4 h-4"></i> SAVED ]`;
+        btn.classList.add('success');
         if (window.lucide) window.lucide.createIcons();
         
         setTimeout(() => {
           btn.innerHTML = origText;
-          btn.className = btn.getAttribute('data-orig-class');
+          btn.classList.remove('success');
           if (window.lucide) window.lucide.createIcons();
-        }, 2500);
+        }, 2000);
       };
 
       const handleStartDownload = async () => {
         await fetch(`${API_BASE}/downloads/selected`, { method: 'POST' });
-        alert('Download process activated. See terminal for real-time progress.');
+        alert('CMD: START_DOWNLOAD DISPATCHED. MONITOR TERMINAL.');
       };
 
       const handleResetDatabase = async () => {
         const confirmed = window.confirm(
-          '⚠️ WARNING: This will completely wipe all local database metadata, including download history, tracked courses, and selection plans.\n\n' +
-          'It will NOT delete your downloaded files on disk, but the system will forget it downloaded them, so a future run may redownload them.\n\n' +
-          'Are you absolutely sure you want to factory reset the local database?'
+          '[ WARNING: DESTRUCTIVE ACTION ]\n\n' +
+          'THIS WILL PURGE THE LOCAL METADATA DATABASE.\n' +
+          'FILES ON DISK WILL REMAIN, BUT INDEX WILL BE LOST.\n\n' +
+          'EXECUTE PURGE?'
         );
         if (!confirmed) return;
         
         try {
           const res = await fetch(`${API_BASE}/db/reset`, { method: 'DELETE' });
           if (res.ok) {
-            alert('Database has been completely erased.');
+            alert('SYS.MSG: DB PURGE COMPLETE.');
             refreshData(); 
           } else {
-            alert('Failed to reset database.');
+            alert('SYS.ERR: PURGE FAILED.');
           }
         } catch (e) {
           console.error(e);
-          alert('Error communicating with the engine.');
+          alert('SYS.ERR: COMMS FAILURE.');
         }
       };
 
       if (loading && !plan) {
         return (
           <div className="flex h-screen items-center justify-center relative z-10">
-            <div className="glass-card p-10 rounded-3xl flex flex-col items-center gap-4">
-              <Icon name="loader-2" className="animate-spin text-blue-500 w-10 h-10" /> 
-              <span className="text-xl font-medium text-slate-600">Initializing Workspace...</span>
+            <div className="flex flex-col items-center gap-6">
+              <div className="text-accent animate-pulse">
+                <Icon name="cpu" className="w-16 h-16" />
+              </div>
+              <span className="text-2xl font-display tracking-widest text-textmain">INITIALIZING_</span>
+              <span className="text-xs text-textmuted font-mono animate-blink">PLEASE WAIT</span>
             </div>
           </div>
         );
       }
 
       return (
-        <div className="flex h-screen flex-col overflow-hidden font-sans relative z-10">
-          <header className="flex h-16 shrink-0 items-center justify-between px-6 glass-header z-20">
+        <div className="flex h-screen flex-col overflow-hidden relative z-10 font-mono text-sm">
+          {/* Header */}
+          <header className="flex h-16 shrink-0 items-center justify-between px-6 brutal-header z-20">
             <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30 text-white">
-                <Icon name="download-cloud" className="h-5 w-5" />
+              <div className="flex h-10 w-10 items-center justify-center border border-accent text-accent">
+                <Icon name="database" className="h-5 w-5" />
               </div>
-              <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">Classroom Downloader</h1>
+              <h1 className="text-xl font-display font-bold tracking-widest text-textmain flex items-center gap-3">
+                CLASSROOM_ARCHIVE
+                <span className="text-[10px] bg-accent text-dark px-2 py-0.5 font-bold font-mono tracking-normal hidden sm:inline-block">V1.0.0</span>
+              </h1>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 rounded-full glass-card px-4 py-1.5 text-sm font-medium shadow-sm transition-all hover:shadow">
-                <span className={`h-2.5 w-2.5 rounded-full shadow-sm ${apiStatus.online ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-red-500 animate-pulse-slow shadow-red-500/50'}`}></span>
-                <span className="text-slate-700">{apiStatus.online ? 'Engine Connected' : 'Engine Offline'}</span>
+              <div className="flex items-center gap-3 border border-muted px-4 py-1.5 text-xs font-bold bg-dark">
+                <span className="text-textmuted">SYS.STATUS:</span>
+                <span className={`flex items-center gap-2 ${apiStatus.online ? 'text-success' : 'text-red-500'}`}>
+                  <span className={`h-2 w-2 ${apiStatus.online ? 'bg-success shadow-[0_0_8px_#00FF66]' : 'bg-red-500 animate-pulse'}`}></span>
+                  {apiStatus.online ? 'ONLINE' : 'OFFLINE'}
+                </span>
               </div>
             </div>
           </header>
 
           <main className="flex flex-1 overflow-hidden">
-            <aside className="w-64 p-4 flex flex-col gap-2 glass-panel z-10 border-r-0 border-white/40 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 mb-2 mt-2">Navigation</div>
+            {/* Sidebar */}
+            <aside className="w-64 p-6 flex flex-col gap-4 brutal-panel z-10 border-t-0 border-b-0 border-l-0">
+              <div className="text-[10px] font-bold text-textmuted border-b border-muted pb-2 mb-2 flex items-center justify-between">
+                <span>[ NAVIGATION_BUS ]</span>
+                <Icon name="terminal" className="w-3 h-3" />
+              </div>
               {[
-                { id: 'classroom', icon: 'presentation', label: 'My Classroom' },
-                { id: 'overview', icon: 'layout-dashboard', label: 'Overview' },
-                { id: 'courses', icon: 'list-tree', label: 'Download Plan' },
-                { id: 'settings', icon: 'settings', label: 'System Details' }
+                { id: 'classroom', icon: 'server', label: 'THE_ARCHIVE' },
+                { id: 'overview', icon: 'activity', label: 'TELEMETRY' },
+                { id: 'courses', icon: 'git-merge', label: 'DL_PLAN' },
+                { id: 'settings', icon: 'settings', label: 'CONFIG' }
               ].map(tab => (
                 <div 
                   key={tab.id}
-                  className={`cursor-pointer rounded-xl px-4 py-3 font-medium flex gap-3 items-center transition-all duration-300 ${activeTab === tab.id ? 'bg-white/80 text-blue-600 shadow-sm border border-white/60' : 'text-slate-600 hover:bg-white/40 hover:text-slate-900 border border-transparent'}`}
+                  className={`cursor-pointer px-4 py-3 font-bold flex gap-4 items-center transition-all duration-150 border-l-2 ${activeTab === tab.id ? 'bg-[#1a1a1a] text-accent border-accent' : 'text-textmuted border-transparent hover:border-textmain hover:text-textmain'}`}
                   onClick={() => setActiveTab(tab.id)}
                 >
-                  <Icon name={tab.icon} className={`w-4 h-4 ${activeTab === tab.id ? 'text-blue-500' : 'opacity-70'}`} /> {tab.label}
+                  <Icon name={tab.icon} className={`w-4 h-4`} /> 
+                  <span className="tracking-widest">{tab.label}</span>
+                  {activeTab === tab.id && <span className="ml-auto text-[10px] animate-blink text-accent">_</span>}
                 </div>
               ))}
+              
+              <div className="mt-auto border-t border-muted pt-4 text-[10px] text-textmuted flex flex-col gap-1 opacity-50 hover:opacity-100 transition-opacity">
+                 <div>UID: 0x{Math.random().toString(16).slice(2, 8).toUpperCase()}</div>
+                 <div>MEM: {(performance?.memory?.usedJSHeapSize / 1048576).toFixed(2) || '0.00'} MB</div>
+                 <div>ENV: PROD</div>
+              </div>
             </aside>
 
+            {/* Main Content Area */}
             <section className="flex-1 overflow-y-auto p-8 relative">
-              <div className="max-w-6xl mx-auto space-y-6 pb-20">
+              <div className="scanline"></div>
+              <div className="max-w-6xl mx-auto space-y-8 pb-20">
                 
+                {/* ----------------- CLASSROOM / ARCHIVE TAB ----------------- */}
                 {activeTab === 'classroom' && coursesData && (
-                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="flex items-center justify-between glass-card p-4 px-6 rounded-2xl border-white/60">
+                  <div className="flex flex-col gap-8 animate-in fade-in duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between brutal-panel p-6 border-muted gap-4">
                       <div>
-                        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">My Classroom</h2>
-                        <p className="text-sm text-slate-500 mt-1">View your downloaded materials and assignments. Click files to open them instantly.</p>
+                        <h2 className="text-2xl font-display font-bold text-textmain tracking-widest flex items-center gap-3">
+                          <Icon name="database" className="w-6 h-6 text-accent"/> THE_ARCHIVE
+                        </h2>
+                        <p className="text-xs text-textmuted mt-2 border-l-2 border-muted pl-3">Access terminal for localized course materials.</p>
                       </div>
-                      <select 
-                        className="rounded-xl border border-white/60 bg-white/50 backdrop-blur-md px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all cursor-pointer hover:bg-white/80"
-                        value={selectedCourseId || ''}
-                        onChange={(e) => setSelectedCourseId(e.target.value)}
-                      >
-                        <option value="" disabled>Select a Course</option>
-                        {coursesData.courses?.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <select 
+                          className="brutal-select pl-4 pr-10 py-3 text-sm font-bold w-full md:w-64"
+                          value={selectedCourseId || ''}
+                          onChange={(e) => setSelectedCourseId(e.target.value)}
+                        >
+                          <option value="" disabled>[ SELECT_SOURCE ]</option>
+                          {coursesData.courses?.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <Icon name="chevron-down" className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-accent pointer-events-none" />
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-8">
+                    <div className="flex flex-col gap-10">
                       {coursesData.courses?.filter(c => c.id === selectedCourseId).map(course => (
                         <div key={course.id} className="flex flex-col gap-8">
-                          {/* Course Header */}
-                          <div className="rounded-[2rem] bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-700/90 backdrop-blur-md p-10 text-white shadow-xl shadow-blue-900/10 border border-white/20 relative overflow-hidden group">
-                            <div className="absolute -top-20 -right-20 p-8 opacity-10 group-hover:scale-110 group-hover:rotate-6 group-hover:opacity-20 transition-all duration-700">
-                              <Icon name="book-open" className="w-96 h-96" />
+                          {/* Course Header Banner */}
+                          <div className="brutal-panel border-accent p-8 relative overflow-hidden group">
+                            <div className="absolute top-0 left-0 w-2 h-full bg-accent"></div>
+                            <div className="absolute top-0 right-0 w-32 h-32 opacity-5 pointer-events-none">
+                               <Icon name="cpu" className="w-full h-full" />
                             </div>
-                            <div className="relative z-10">
-                              <h1 className="text-5xl font-extrabold mb-4 tracking-tight drop-shadow-sm">{course.name}</h1>
-                              <p className="text-blue-100 font-medium text-lg flex items-center gap-2">
-                                <span className="bg-white/20 p-1.5 rounded-lg backdrop-blur-md"><Icon name="user" className="w-4 h-4"/></span> {course.teacher}
-                              </p>
-                              {course.section && <p className="text-sm text-blue-200 mt-3 bg-black/20 inline-block px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10">{course.section}</p>}
+                            <div className="pl-6">
+                              <div className="text-[10px] text-accent mb-2 font-bold tracking-widest">[ COURSE_OBJ: {course.id} ]</div>
+                              <h1 className="text-4xl font-display font-bold mb-4 tracking-tight text-textmain uppercase">{course.name}</h1>
+                              <div className="flex flex-wrap gap-4 text-xs font-bold">
+                                <span className="border border-muted px-3 py-1 flex items-center gap-2 bg-dark">
+                                  <Icon name="user" className="w-3 h-3 text-textmuted"/> <span className="text-textmuted">INSTR:</span> {course.teacher}
+                                </span>
+                                {course.section && (
+                                  <span className="border border-muted px-3 py-1 flex items-center gap-2 bg-dark">
+                                    <Icon name="hash" className="w-3 h-3 text-textmuted"/> <span className="text-textmuted">SECT:</span> {course.section}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
 
                           {/* Topics */}
-                          <div className="flex flex-col gap-8">
+                          <div className="flex flex-col gap-10">
                             {course.topics?.map(topic => (
-                              <div key={topic.id} className="flex flex-col gap-5">
-                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3 pl-2">
-                                  <div className="p-2 bg-white/60 rounded-xl shadow-sm border border-white/80 text-blue-500">
-                                    <Icon name="folder" className="w-5 h-5"/>
-                                  </div>
-                                  {topic.title || 'Stream / General'}
+                              <div key={topic.id} className="flex flex-col gap-4">
+                                <h2 className="text-lg font-bold text-textmain flex items-center gap-3 border-b border-muted pb-2">
+                                  <Icon name="folder-tree" className="w-5 h-5 text-accent"/>
+                                  {topic.title || 'ROOT_DIR'}
                                 </h2>
                                 
-                                <div className="grid grid-cols-1 gap-5">
+                                <div className="grid grid-cols-1 gap-4 pl-0 sm:pl-4 border-l border-muted/30">
                                   {topic.materials?.map(mat => {
                                     const mType = mat.type ? mat.type.toLowerCase() : 'other';
                                     const isAssignment = mType === 'assignment';
+                                    const bColor = isAssignment ? 'border-accent' : 'border-success';
+                                    const tColor = isAssignment ? 'text-accent' : 'text-success';
+
                                     return (
-                                      <div key={mat.id} className={`flex gap-5 p-6 rounded-2xl glass-card transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${isAssignment ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-emerald-500'}`}>
-                                        <div className={`mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-sm ${isAssignment ? 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 border border-blue-200/50' : 'bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600 border border-emerald-200/50'}`}>
-                                          <Icon name={isAssignment ? 'clipboard-check' : 'book-open'} className="w-7 h-7"/>
-                                        </div>
-                                        <div className="flex-1 flex flex-col gap-3 min-w-0">
-                                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                                      <div key={mat.id} className={`brutal-panel border-l-4 ${bColor} p-5 flex flex-col gap-4 hover:bg-[#111] transition-colors`}>
+                                        
+                                        {/* Material Header */}
+                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                          <div className="flex gap-4 items-start">
+                                            <div className={`mt-1 p-2 border ${bColor} ${tColor} bg-dark`}>
+                                              <Icon name={isAssignment ? 'terminal-square' : 'book-open'} className="w-5 h-5"/>
+                                            </div>
                                             <div>
-                                              <h3 className="font-bold text-xl text-slate-800">{mat.title}</h3>
-                                              <div className="flex gap-2 items-center mt-2">
-                                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-widest ${isAssignment ? 'bg-blue-100/50 text-blue-700' : 'bg-emerald-100/50 text-emerald-700'}`}>{mType}</span>
-                                                {mat.due_date && <span className="text-[11px] font-bold text-rose-600 bg-rose-50/80 px-2.5 py-1 rounded-md border border-rose-100/50 flex items-center gap-1.5"><Icon name="clock" className="w-3.5 h-3.5"/> Due: {mat.due_date}</span>}
+                                              <h3 className="font-bold text-base text-textmain tracking-wide">{mat.title}</h3>
+                                              <div className="flex flex-wrap gap-3 items-center mt-2">
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 border ${bColor} ${tColor}`}>{mType.toUpperCase()}</span>
+                                                {mat.due_date && <span className="text-[10px] font-bold text-red-500 border border-red-500/50 px-2 py-0.5 flex items-center gap-1.5 bg-red-500/10">DUE: {mat.due_date}</span>}
                                               </div>
                                             </div>
                                           </div>
-                                          {mat.description && <p className="text-sm text-slate-600 whitespace-pre-wrap bg-white/40 p-4 rounded-xl border border-white/60 mt-1 leading-relaxed">{mat.description}</p>}
-                                          
-                                          {/* Attachments Grid */}
-                                          {mat.attachments?.length > 0 && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-200/50">
+                                        </div>
+                                        
+                                        {mat.description && (
+                                          <div className="text-xs text-textmuted whitespace-pre-wrap bg-dark p-4 border border-muted leading-relaxed font-mono overflow-x-auto">
+                                            {mat.description}
+                                          </div>
+                                        )}
+                                        
+                                        {/* Attachments */}
+                                        {mat.attachments?.length > 0 && (
+                                          <div className="mt-2 flex flex-col gap-2">
+                                            <div className="text-[10px] text-textmuted mb-1">[ ATTACHED_PAYLOADS ]</div>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                                               {mat.attachments.map(att => {
                                                 const isDownloaded = att.status === 'complete' && att.local_path;
                                                 return (
-                                                  <div key={att.id} className={`group flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${isDownloaded ? 'border-white/60 bg-white/60 hover:bg-white hover:border-blue-300 hover:shadow-md cursor-pointer' : 'border-dashed border-slate-300/60 bg-slate-50/40 opacity-70'} `}
+                                                  <div key={att.id} className={`flex items-center gap-3 p-2 border transition-all ${isDownloaded ? 'border-muted bg-[#141414] hover:border-textmain cursor-pointer' : 'border-dashed border-muted/50 bg-transparent opacity-60'} `}
                                                     onClick={() => {
                                                       if (isDownloaded) {
                                                         fetch(`${API_BASE}/open`, {
                                                           method: 'POST',
                                                           headers: { 'Content-Type': 'application/json' },
                                                           body: JSON.stringify({ id: att.id })
-                                                        }).then(async res => {
-                                                          if (!res.ok) {
-                                                            const data = await res.json().catch(() => ({}));
-                                                            alert(`Failed to open file: ${data.error || res.statusText}`);
-                                                          }
-                                                        }).catch(err => alert('Failed to open file.'));
+                                                        }).catch(err => alert('SYS.ERR: EXEC FAILURE.'));
                                                       }
                                                     }}
                                                   >
-                                                    <div className={`flex items-center justify-center w-11 h-11 rounded-xl shadow-sm transition-transform group-hover:scale-105 ${isDownloaded ? 'bg-gradient-to-br from-blue-50 to-white text-blue-600 border border-blue-100' : 'bg-slate-200/50 text-slate-400'}`}>
-                                                      <Icon name={att.provider === 'youtube' ? 'youtube' : att.provider === 'form' ? 'form-input' : 'file-text'} className="h-5 w-5" />
+                                                    <div className={`p-1.5 border ${isDownloaded ? 'border-muted text-textmain bg-dark' : 'border-transparent text-textmuted'}`}>
+                                                      <Icon name={att.provider === 'youtube' ? 'youtube' : att.provider === 'form' ? 'form-input' : 'file-code'} className="h-4 w-4" />
                                                     </div>
-                                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                      <span className={`truncate text-sm font-semibold ${isDownloaded ? 'text-slate-800' : 'text-slate-500'}`} title={att.filename}>{att.filename}</span>
-                                                      <span className={`text-[11px] font-bold flex items-center gap-1 mt-0.5 tracking-wide ${isDownloaded ? 'text-blue-500' : 'text-slate-400'}`}>
-                                                        {isDownloaded ? <><Icon name="external-link" className="w-3 h-3"/> Click to open</> : 'Pending Download'}
+                                                    <div className="flex-1 min-w-0 flex flex-col">
+                                                      <span className={`truncate text-xs font-bold ${isDownloaded ? 'text-textmain' : 'text-textmuted'}`} title={att.filename}>{att.filename}</span>
+                                                      <span className={`text-[9px] mt-0.5 font-bold ${isDownloaded ? 'text-success' : 'text-textmuted'}`}>
+                                                        {isDownloaded ? '> READY. CLICK TO EXECUTE.' : '> STATUS: PENDING DL'}
                                                       </span>
                                                     </div>
+                                                    {isDownloaded && <Icon name="arrow-up-right" className="w-3 h-3 text-textmuted mr-2"/>}
                                                   </div>
                                                 );
                                               })}
                                             </div>
-                                          )}
-                                        </div>
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
                                   {(!topic.materials || topic.materials.length === 0) && (
-                                    <div className="text-sm text-slate-500 italic p-6 glass-card rounded-2xl border-dashed border-slate-300 flex items-center gap-3">
-                                      <Icon name="inbox" className="w-5 h-5 text-slate-400"/> No items posted in this topic yet.
+                                    <div className="text-xs text-textmuted border border-dashed border-muted p-4 text-center">
+                                      [ EMPTY_DIR ]
                                     </div>
                                   )}
                                 </div>
@@ -406,66 +571,72 @@
                   </div>
                 )}
 
+                {/* ----------------- TELEMETRY / OVERVIEW TAB ----------------- */}
                 {activeTab === 'overview' && (
-                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="glass-card rounded-3xl p-8 shadow-sm">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600 border border-blue-500/20"><Icon name="info" className="w-6 h-6"/></div>
-                        <h2 className="text-2xl font-bold text-slate-800">Getting Started</h2>
+                  <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+                    <div className="brutal-panel p-8">
+                      <div className="flex items-center gap-4 mb-6 border-b border-muted pb-4">
+                        <Icon name="activity" className="w-6 h-6 text-accent"/>
+                        <h2 className="text-2xl font-display font-bold text-textmain tracking-widest">SYSTEM_TELEMETRY</h2>
                       </div>
-                      <p className="text-slate-600 mb-8 text-base leading-relaxed max-w-3xl font-medium bg-white/40 p-6 rounded-2xl border border-white/60">
-                        Welcome to the next generation of Classroom Downloader. This dashboard intelligently connects to your local engine to view all discovered courses, topics, and materials. You have full control over what is archived locally.
-                      </p>
+                      <div className="text-xs text-textmuted mb-8 leading-relaxed max-w-3xl border-l-2 border-accent pl-4">
+                        > INITIALIZING DASHBOARD UI...<br/>
+                        > CONNECTION ESTABLISHED.<br/>
+                        > PARSING METADATA FROM LOCAL DB.<br/>
+                        > SYSTEM IS READY.
+                      </div>
+                      
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {[
-                          { label: 'Available Courses', value: getStats.courses, icon: 'library', color: 'blue' },
-                          { label: 'Total Available Items', value: getStats.items, icon: 'paperclip', color: 'purple' },
-                          { label: 'Total File Size (Est.)', value: bytesToSize(getStats.bytes), icon: 'hard-drive', color: 'emerald' }
+                          { label: 'IDX_COURSES', value: getStats.courses, icon: 'database' },
+                          { label: 'TOTAL_NODES', value: getStats.items, icon: 'network' },
+                          { label: 'EST_PAYLOAD', value: bytesToSize(getStats.bytes), icon: 'hard-drive' }
                         ].map((stat, i) => (
-                          <div key={i} className="rounded-2xl border border-white/60 bg-white/50 backdrop-blur-md p-6 shadow-sm hover:shadow-md transition-shadow group">
-                            <div className="flex items-center gap-4 mb-4">
-                              <div className={`p-3 bg-${stat.color}-500/10 rounded-xl text-${stat.color}-600 border border-${stat.color}-500/20 group-hover:scale-110 transition-transform`}><Icon name={stat.icon} className="w-5 h-5"/></div>
-                              <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">{stat.label}</div>
-                            </div>
-                            <div className="text-4xl font-extrabold text-slate-800 tracking-tight">{stat.value}</div>
+                          <div key={i} className="border border-muted p-6 bg-dark hover:border-textmain transition-colors group relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon name={stat.icon} className="w-16 h-16"/></div>
+                            <div className="text-[10px] font-bold text-textmuted mb-2 tracking-widest">[ {stat.label} ]</div>
+                            <div className="text-4xl font-display font-bold text-textmain">{stat.value}</div>
                           </div>
                         ))}
                       </div>
                     </div>
                     
-                    <div className="glass-card rounded-3xl p-8 shadow-sm">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-600 border border-amber-500/20"><Icon name="play-circle" className="w-6 h-6"/></div>
-                        <h3 className="text-2xl font-bold text-slate-800">Quick Actions</h3>
+                    <div className="brutal-panel p-8">
+                      <div className="flex items-center gap-4 mb-6 border-b border-muted pb-4">
+                        <Icon name="terminal" className="w-6 h-6 text-success"/>
+                        <h3 className="text-2xl font-display font-bold text-textmain tracking-widest">EXECUTE_COMMANDS</h3>
                       </div>
                       <div className="flex flex-wrap gap-4">
-                        <button onClick={handleTriggerRefreshPlan} className="flex items-center gap-2 rounded-xl bg-white/80 border border-white px-6 py-3 font-semibold text-slate-700 shadow-sm hover:bg-white transition-all active:scale-95 hover:shadow-md">
-                          <Icon name="refresh-cw" className="w-4 h-4"/> Sync Classroom Data
+                        <button onClick={handleTriggerRefreshPlan} className="brutal-btn px-6 py-3 secondary">
+                          <Icon name="refresh-cw" className="w-4 h-4"/> [ SYNC_METADATA ]
                         </button>
-                        <button id="save-btn-overview" data-orig-class="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all active:scale-95" onClick={() => handleSaveSelection('save-btn-overview')} className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all active:scale-95">
-                          <Icon name="save" className="w-4 h-4"/> Save Download Plan
+                        <button id="save-btn-overview" onClick={() => handleSaveSelection('save-btn-overview')} className="brutal-btn px-6 py-3">
+                          <Icon name="save" className="w-4 h-4"/> [ COMMIT_PLAN ]
                         </button>
-                        <button onClick={handleStartDownload} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-lg transition-all active:scale-95">
-                          <Icon name="download" className="w-4 h-4"/> Start Downloading
+                        <button onClick={handleStartDownload} className="brutal-btn px-6 py-3 success">
+                          <Icon name="download" className="w-4 h-4"/> [ INIT_DOWNLOAD ]
                         </button>
                       </div>
                     </div>
                   </div>
                 )}
 
+                {/* ----------------- DL_PLAN / COURSES TAB ----------------- */}
                 {activeTab === 'courses' && plan && (
-                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between glass-card p-6 rounded-3xl border-white/60 gap-4">
+                  <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between brutal-panel p-6 border-accent gap-4">
                       <div>
-                        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Select Files to Download</h2>
-                        <p className="text-sm text-slate-500 mt-1 font-medium">Review the materials below. Uncheck anything you don't want to download.</p>
+                        <h2 className="text-2xl font-display font-bold text-textmain tracking-widest flex items-center gap-3">
+                          <Icon name="git-merge" className="w-6 h-6 text-accent"/> DOWNLOAD_PLAN
+                        </h2>
+                        <p className="text-xs text-textmuted mt-2">Configure nodes for localized archival. Uncheck to ignore.</p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <button 
                           onClick={() => setSelection(prev => ({ ...prev, excluded_attachment_ids: [] }))} 
-                          className="flex items-center gap-2 rounded-xl bg-white/70 border border-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-white transition-all active:scale-95"
+                          className="brutal-btn px-4 py-2 secondary text-xs"
                         >
-                          <Icon name="check-square" className="w-4 h-4 text-emerald-500"/> Select All
+                          <Icon name="check-square" className="w-3 h-3 text-success"/> ALL
                         </button>
                         <button 
                            onClick={() => {
@@ -473,17 +644,17 @@
                              plan.courses?.forEach(c => c.topics?.forEach(t => t.materials?.forEach(m => m.attachments?.forEach(a => allIds.push(a.id)))));
                              setSelection(prev => ({ ...prev, excluded_attachment_ids: allIds }));
                            }} 
-                           className="flex items-center gap-2 rounded-xl bg-white/70 border border-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-white transition-all active:scale-95"
+                           className="brutal-btn px-4 py-2 secondary text-xs"
                         >
-                          <Icon name="x-square" className="w-4 h-4 text-red-500"/> Deselect All
+                          <Icon name="x-square" className="w-3 h-3 text-red-500"/> NONE
                         </button>
-                        <button id="save-btn-plan" data-orig-class="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95" onClick={() => handleSaveSelection('save-btn-plan')} className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95">
-                          <Icon name="save" className="w-4 h-4"/> Save Plan
+                        <button id="save-btn-plan" onClick={() => handleSaveSelection('save-btn-plan')} className="brutal-btn px-6 py-2 text-xs">
+                          <Icon name="save" className="w-3 h-3"/> COMMIT
                         </button>
                       </div>
                     </div>
                     
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 font-mono">
                       {plan.courses?.map(course => {
                         const allCourseAtts = [];
                         course.topics?.forEach(t => t.materials?.forEach(m => m.attachments?.forEach(a => allCourseAtts.push(a.id))));
@@ -494,18 +665,20 @@
                         const courseFullyEmpty = totalCourse > 0 && selectedCourse === 0;
 
                         return (
-                        <details key={course.id} className="group glass-card rounded-2xl overflow-hidden transition-all duration-300 [&_summary::-webkit-details-marker]:hidden">
-                          <summary className="flex cursor-pointer items-center justify-between p-6 bg-white/30 hover:bg-white/60 transition-colors border-b border-transparent group-open:border-white/50">
+                        <details key={course.id} className="group brutal-panel overflow-hidden transition-all duration-300 [&_summary::-webkit-details-marker]:hidden border-muted">
+                          <summary className="flex cursor-pointer items-center justify-between p-4 bg-[#0a0a0a] hover:bg-[#111] transition-colors border-b border-transparent group-open:border-muted">
                             <div className="flex items-center gap-4">
-                              <h3 className={`font-bold text-xl ${courseFullyEmpty ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{course.name}</h3>
-                              <span className="rounded-lg bg-white/60 border border-white px-3 py-1 text-xs font-bold text-slate-600 shadow-sm backdrop-blur-md">{course.teacher}</span>
+                              <span className="text-accent group-open:rotate-90 transition-transform"><Icon name="chevron-right" className="w-4 h-4"/></span>
+                              <h3 className={`font-bold text-sm ${courseFullyEmpty ? 'text-textmuted line-through' : 'text-textmain'}`}>
+                                {course.name} <span className="text-textmuted font-normal">[{course.teacher}]</span>
+                              </h3>
                             </div>
-                            <div className="flex items-center gap-4 text-slate-400">
-                              <span className={`text-xs font-bold px-3 py-1 rounded-lg border shadow-sm backdrop-blur-md ${courseFullySelected ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20' : courseFullyEmpty ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-700 border-blue-500/20'}`}>
-                                {selectedCourse} / {totalCourse} items
+                            <div className="flex items-center gap-4 text-xs font-bold">
+                              <span className={`px-2 py-1 border ${courseFullySelected ? 'border-success text-success' : courseFullyEmpty ? 'border-red-500 text-red-500' : 'border-accent text-accent'}`}>
+                                {selectedCourse} / {totalCourse} NODES
                               </span>
                               {totalCourse > 0 && (
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button onClick={(e) => {
                                     e.preventDefault(); e.stopPropagation();
                                     setSelection(prev => {
@@ -513,7 +686,7 @@
                                       allCourseAtts.forEach(id => excl.delete(id));
                                       return { ...prev, excluded_attachment_ids: [...excl] };
                                     });
-                                  }} className="px-2 py-1 text-[10px] uppercase font-bold rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-sm">All</button>
+                                  }} className="px-2 py-0.5 border border-muted text-textmuted hover:text-success hover:border-success transition-colors">ALL</button>
                                   <button onClick={(e) => {
                                     e.preventDefault(); e.stopPropagation();
                                     setSelection(prev => {
@@ -521,19 +694,15 @@
                                       allCourseAtts.forEach(id => excl.add(id));
                                       return { ...prev, excluded_attachment_ids: [...excl] };
                                     });
-                                  }} className="px-2 py-1 text-[10px] uppercase font-bold rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm">None</button>
+                                  }} className="px-2 py-0.5 border border-muted text-textmuted hover:text-red-500 hover:border-red-500 transition-colors">NONE</button>
                                 </div>
                               )}
-                              <span className="text-sm font-semibold border-l border-slate-300 pl-4">{course.topics?.length || 0} topics</span>
-                              <div className="w-8 h-8 rounded-full bg-white/80 shadow-sm flex items-center justify-center group-open:rotate-180 transition duration-300">
-                                <Icon name="chevron-down" className="h-4 w-4 text-slate-600" />
-                              </div>
                             </div>
                           </summary>
                           
-                          <div className="flex flex-col divide-y divide-slate-200/50 bg-white/20 backdrop-blur-md">
+                          <div className="flex flex-col divide-y divide-muted bg-dark pl-8 pb-4">
                             {(course.topics || []).length === 0 ? (
-                               <div className="p-8 text-center text-slate-500 font-medium">No topics or materials found for this course.</div>
+                               <div className="p-4 text-xs text-textmuted">[ NO_DATA ]</div>
                             ) : null}
                             {course.topics?.map(topic => {
                               const allTopicAtts = [];
@@ -545,65 +714,62 @@
                               const topicFullyEmpty = totalTopic > 0 && selectedTopic === 0;
 
                               return (
-                              <div key={topic.id} className="p-6 hover:bg-white/40 transition-colors">
-                                <div className="flex items-center justify-between mb-4">
-                                  <h4 className={`text-base font-bold flex items-center gap-2 ${topicFullyEmpty ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                                    <Icon name={topicFullySelected ? "check-circle" : "folder"} className={`w-5 h-5 ${topicFullySelected ? 'text-emerald-500' : 'text-slate-400'}`}/>
-                                    {topic.title || 'General'}
+                              <div key={topic.id} className="p-4 pl-0">
+                                <div className="flex items-center justify-between mb-4 border-l border-muted pl-4">
+                                  <h4 className={`text-xs font-bold flex items-center gap-2 ${topicFullyEmpty ? 'text-textmuted line-through' : 'text-textmain'}`}>
+                                    <Icon name="corner-down-right" className="w-4 h-4 text-muted"/>
+                                    {topic.title || 'ROOT'}
                                   </h4>
                                   <div className="flex items-center gap-3">
-                                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md border ${topicFullySelected ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : topicFullyEmpty ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-600 border-blue-500/20'}`}>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 border ${topicFullySelected ? 'text-success border-success' : topicFullyEmpty ? 'text-red-500 border-red-500' : 'text-accent border-accent'}`}>
                                       {selectedTopic}/{totalTopic}
                                     </span>
                                     {totalTopic > 0 && (
-                                      <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center gap-1">
                                         <button onClick={() => {
                                           setSelection(prev => {
                                             const excl = new Set(prev.excluded_attachment_ids || []);
                                             allTopicAtts.forEach(id => excl.delete(id));
                                             return { ...prev, excluded_attachment_ids: [...excl] };
                                           });
-                                        }} className="px-2 py-1 text-[10px] uppercase font-bold rounded-md bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-sm">All</button>
+                                        }} className="text-[9px] px-1 border border-transparent hover:border-success hover:text-success text-textmuted transition-colors">ALL</button>
                                         <button onClick={() => {
                                           setSelection(prev => {
                                             const excl = new Set(prev.excluded_attachment_ids || []);
                                             allTopicAtts.forEach(id => excl.add(id));
                                             return { ...prev, excluded_attachment_ids: [...excl] };
                                           });
-                                        }} className="px-2 py-1 text-[10px] uppercase font-bold rounded-md bg-white border border-slate-200 text-slate-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm">None</button>
+                                        }} className="text-[9px] px-1 border border-transparent hover:border-red-500 hover:text-red-500 text-textmuted transition-colors">NONE</button>
                                       </div>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex flex-col gap-4 pl-7">
+                                <div className="flex flex-col gap-2 pl-9">
                                   {Object.entries((topic.materials || []).reduce((acc, mat) => {
                                     const t = mat.type ? mat.type.toLowerCase() : 'other';
                                     if (!acc[t]) acc[t] = [];
                                     acc[t].push(mat);
                                     return acc;
-                                  }, {})).map(([mType, mats], idx) => (
-                                    <div key={mType} className={`flex flex-col gap-3 ${idx > 0 ? 'mt-4 pt-4 border-t border-slate-200/60' : ''}`}>
-                                      <h5 className="text-[11px] items-center gap-2 uppercase font-extrabold text-slate-500 flex tracking-widest pl-1">
-                                        {mType === 'assignment' ? <Icon name="clipboard-check" className="w-4 h-4 text-blue-400"/> :
-                                         mType === 'material' ? <Icon name="book-open" className="w-4 h-4 text-emerald-400"/> :
-                                         <Icon name="file-question" className="w-4 h-4 text-purple-400"/>}
+                                  }, {})).map(([mType, mats]) => (
+                                    <div key={mType} className={`flex flex-col gap-2 border-l border-muted/50 pl-4 py-2`}>
+                                      <h5 className="text-[10px] font-bold text-textmuted uppercase tracking-widest border-b border-muted/50 pb-1 inline-block w-max">
                                         {mType}s
                                       </h5>
                                       {mats.map(mat => (
-                                        <div key={mat.id} className={`rounded-xl border border-white/60 p-5 bg-white/70 shadow-sm border-l-4 hover:shadow-md transition-shadow ${mType === 'assignment' ? 'border-l-blue-500' : mType === 'material' ? 'border-l-emerald-500' : 'border-l-purple-500'}`}>
-                                          <div className="flex items-center gap-3 mb-3">
-                                            <span className="text-base font-bold text-slate-800">{mat.title}</span>
+                                        <div key={mat.id} className="flex flex-col gap-1 mt-2">
+                                          <div className="text-xs font-bold text-textmain flex items-center gap-2">
+                                            <span className="text-muted">|-</span> {mat.title}
                                           </div>
                                           
-                                          <div className="flex flex-col gap-2.5 pl-2">
+                                          <div className="flex flex-col gap-1 pl-4 mt-1">
                                             {mat.attachments?.map(att => {
                                               const isExcluded = selection?.excluded_attachment_ids?.includes(att.id);
                                               return (
-                                              <label key={att.id} className={`flex items-center gap-4 text-sm p-2.5 rounded-xl transition-all duration-200 cursor-pointer border ${isExcluded ? 'opacity-60 bg-slate-100/50 border-transparent text-slate-400' : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm text-slate-800'}`}>
+                                              <label key={att.id} className={`flex items-center gap-3 text-xs p-1.5 transition-colors cursor-pointer border ${isExcluded ? 'border-transparent text-textmuted opacity-50' : 'border-muted bg-[#111] hover:border-accent text-textmain'}`}>
                                                 <input 
                                                   type="checkbox" 
                                                   checked={!isExcluded} 
-                                                  className="rounded-md border-slate-300 w-4.5 h-4.5 text-blue-600 focus:ring-blue-600 focus:ring-offset-0 disabled:opacity-50 cursor-pointer"
+                                                  className="appearance-none w-3 h-3 border border-textmuted checked:bg-accent checked:border-accent disabled:opacity-50 cursor-pointer"
                                                   onChange={(e) => {
                                                     const checked = e.target.checked;
                                                     setSelection(prev => {
@@ -618,24 +784,19 @@
                                                     });
                                                   }}
                                                 />
-                                                <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${isExcluded ? 'bg-slate-200/50 text-slate-400' : 'bg-blue-50 text-blue-600'}`}>
-                                                  <Icon name={att.provider === 'youtube' ? 'youtube' : att.provider === 'form' ? 'form-input' : 'file-text'} className="h-4 w-4" />
-                                                </div>
-                                                <span className={`truncate flex-1 font-semibold ${isExcluded ? 'line-through' : ''}`}>{att.filename}</span>
-                                                <span className="text-[11px] text-slate-500 font-bold bg-slate-100/80 px-2.5 py-1 flex items-center justify-center rounded-md border border-slate-200/60 tracking-tight">{bytesToSize(att.size_bytes)}</span>
+                                                <Icon name={att.provider === 'youtube' ? 'youtube' : att.provider === 'form' ? 'form-input' : 'file-code'} className="h-3 w-3 text-textmuted" />
+                                                <span className={`truncate flex-1 font-mono ${isExcluded ? 'line-through' : ''}`}>{att.filename}</span>
+                                                <span className="text-[9px] text-textmuted font-bold tracking-tight">[{bytesToSize(att.size_bytes)}]</span>
                                               </label>
                                             )})}
                                             {(!mat.attachments || mat.attachments.length === 0) && (
-                                              <span className="text-xs text-slate-400 font-medium italic bg-white/50 rounded-lg p-3 text-center border border-dashed border-slate-300">No attachments provided</span>
+                                              <span className="text-[10px] text-textmuted border border-dashed border-muted p-1 inline-block w-max">[ NO_ATTACHMENTS ]</span>
                                             )}
                                           </div>
                                         </div>
                                       ))}
                                     </div>
                                   ))}
-                                  {(!topic.materials || topic.materials.length === 0) && (
-                                      <span className="text-xs text-slate-400 italic">No materials in this topic.</span>
-                                  )}
                                 </div>
                               </div>
                             )})}
@@ -646,74 +807,73 @@
                   </div>
                 )}
 
+                {/* ----------------- CONFIG / SETTINGS TAB ----------------- */}
                 {activeTab === 'settings' && (
-                  <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
-                    <h2 className="text-3xl font-bold text-slate-800 tracking-tight pb-2">System Details</h2>
+                  <div className="flex flex-col gap-8 animate-in fade-in duration-300">
+                    <div className="flex items-center gap-4 border-b border-muted pb-4">
+                      <Icon name="settings" className="w-6 h-6 text-textmain"/>
+                      <h2 className="text-2xl font-display font-bold text-textmain tracking-widest">SYSTEM_CONFIG</h2>
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="glass-card rounded-3xl p-8 flex flex-col gap-4 hover:shadow-lg transition-shadow border-white/60">
-                        <div className="flex items-center gap-4">
-                           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 border border-blue-200">
-                             <Icon name="folder-tree" className="h-6 w-6" />
-                           </div>
-                           <h3 className="font-extrabold text-slate-800 text-xl">System Layout</h3>
+                      <div className="brutal-panel p-6 border-muted flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                           <Icon name="folder-tree" className="h-5 w-5 text-accent" />
+                           <h3 className="font-bold text-textmain text-sm">STORAGE_TOPOLOGY</h3>
                         </div>
-                        <p className="text-base text-slate-600 leading-relaxed font-medium mt-2">
-                           All your data stays entirely on your local machine.
-                           By default, everything is saved directly into the <code className="bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200">./output/</code> folder in this project's directory.
+                        <p className="text-xs text-textmuted leading-relaxed font-mono mt-2">
+                           All records are strictly localized. Target output directory: <span className="text-textmain border border-muted px-1">./output/</span>
                         </p>
-                        <div className="mt-auto pt-5 border-t border-slate-200/60">
-                          <ul className="text-sm font-mono flex flex-col gap-3 font-semibold text-slate-600">
-                            <li className="flex items-center gap-3"><span className="p-1.5 bg-slate-100 rounded-md border border-slate-200"><Icon name="file-json" className="h-4 w-4"/></span> ./output/master_index.json</li>
-                            <li className="flex items-center gap-3"><span className="p-1.5 bg-slate-100 rounded-md border border-slate-200"><Icon name="database" className="h-4 w-4"/></span> ./database/classroom.db</li>
-                            <li className="flex items-center gap-3"><span className="p-1.5 bg-slate-100 rounded-md border border-slate-200"><Icon name="files" className="h-4 w-4"/></span> ./output/courses/*</li>
+                        <div className="mt-auto pt-4 border-t border-muted">
+                          <ul className="text-xs font-mono flex flex-col gap-2 text-textmuted">
+                            <li className="flex items-center gap-2"><Icon name="file-json" className="h-3 w-3"/> ./output/master_index.json</li>
+                            <li className="flex items-center gap-2"><Icon name="database" className="h-3 w-3"/> ./database/classroom.db</li>
+                            <li className="flex items-center gap-2"><Icon name="files" className="h-3 w-3"/> ./output/courses/*</li>
                           </ul>
                         </div>
                       </div>
 
-                      <div className="glass-card rounded-3xl p-8 flex flex-col gap-4 hover:shadow-lg transition-shadow border-white/60">
-                        <div className="flex items-center gap-4">
-                           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600 border border-emerald-200">
-                             <Icon name="shield-check" className="h-6 w-6" />
-                           </div>
-                           <h3 className="font-extrabold text-slate-800 text-xl">Smart Downloading</h3>
+                      <div className="brutal-panel p-6 border-muted flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                           <Icon name="shield-check" className="h-5 w-5 text-success" />
+                           <h3 className="font-bold text-textmain text-sm">CACHING_MECHANISM</h3>
                         </div>
-                        <p className="text-base text-slate-600 leading-relaxed font-medium mt-2">
-                          The downloader remembers what it has already grabbed using an intelligent caching mechanism.
+                        <p className="text-xs text-textmuted leading-relaxed font-mono mt-2">
+                          Downloader maintains internal state to skip processed payloads.
                         </p>
-                        <p className="text-base text-slate-600 leading-relaxed font-medium bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-                          If you restart the downloader, it will automatically skip files it has already saved locally. This saves significant time and bandwidth!
+                        <p className="text-xs text-success bg-success/10 border border-success/30 p-3 mt-2">
+                          > STATE: ACTIVE<br/>
+                          > RESTARTING DOWNLOADER WILL BYPASS CACHED FILES.
                         </p>
                       </div>
 
-                      <div className="glass-card rounded-3xl p-8 flex flex-col gap-4 hover:shadow-lg transition-shadow md:col-span-2 border-white/60">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-orange-50 text-orange-600 border border-orange-200">
-                              <Icon name="hard-drive" className="h-6 w-6" />
-                            </div>
-                            <h3 className="font-extrabold text-slate-800 text-xl">Recently Downloaded Files</h3>
+                      <div className="brutal-panel p-6 border-muted flex flex-col gap-4 md:col-span-2">
+                        <div className="flex items-center justify-between border-b border-muted pb-4">
+                          <div className="flex items-center gap-3">
+                            <Icon name="hard-drive" className="h-5 w-5 text-textmain" />
+                            <h3 className="font-bold text-textmain text-sm">LOCAL_REGISTRY</h3>
                           </div>
-                          <span className="text-sm font-bold text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">{dbFiles?.filter(f => f.status === 'complete').length || 0} items locally</span>
+                          <span className="text-xs font-bold text-accent border border-accent px-2 py-1">TOTAL_NODES: {dbFiles?.filter(f => f.status === 'complete').length || 0}</span>
                         </div>
-                        <div className="mt-4 border border-white/60 rounded-2xl bg-white/50 backdrop-blur-sm overflow-hidden shadow-inner">
-                          <div className="max-h-[400px] overflow-y-auto w-full text-sm font-mono whitespace-nowrap">
+                        
+                        <div className="mt-2 border border-muted bg-dark overflow-hidden">
+                          <div className="max-h-[300px] overflow-y-auto w-full text-xs font-mono whitespace-nowrap">
                             <table className="w-full text-left border-collapse">
-                              <thead className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 shadow-sm z-10">
+                              <thead className="bg-[#111] border-b border-muted sticky top-0 z-10">
                                 <tr>
-                                  <th className="px-5 py-4 font-bold text-slate-700 w-1/4 uppercase tracking-wider text-xs">Course</th>
-                                  <th className="px-5 py-4 font-bold text-slate-700 w-1/3 uppercase tracking-wider text-xs">File Name</th>
-                                  <th className="px-5 py-4 font-bold text-slate-700 uppercase tracking-wider text-xs">Local Path</th>
+                                  <th className="px-4 py-3 font-bold text-textmuted w-1/4">COURSE_ID</th>
+                                  <th className="px-4 py-3 font-bold text-textmuted w-1/3">PAYLOAD_NAME</th>
+                                  <th className="px-4 py-3 font-bold text-textmuted">LOCAL_URI</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-slate-200/60 font-medium">
+                              <tbody className="divide-y divide-muted text-textmuted">
                                 {!dbFiles || dbFiles.filter(f => f.status === 'complete').length === 0 ? (
-                                  <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-500 italic bg-white/40">No files downloaded yet. Start downloading to see them here!</td></tr>
+                                  <tr><td colSpan="3" className="px-4 py-8 text-center opacity-50">[ REGISTRY_EMPTY ]</td></tr>
                                 ) : dbFiles.filter(f => f.status === 'complete').map(f => (
-                                  <tr key={f.id} className="hover:bg-white/80 transition-colors">
-                                    <td className="px-5 py-3 text-slate-600 truncate max-w-[200px]" title={f.course_name}>{f.course_name}</td>
-                                    <td className="px-5 py-3 font-semibold text-slate-800 truncate max-w-[300px]" title={f.filename}>{f.filename}</td>
-                                    <td className="px-5 py-3 text-slate-500 truncate max-w-[400px]" title={f.local_path}>{f.local_path}</td>
+                                  <tr key={f.id} className="hover:bg-[#1a1a1a] hover:text-textmain transition-colors">
+                                    <td className="px-4 py-2 truncate max-w-[150px]" title={f.course_name}>{f.course_name}</td>
+                                    <td className="px-4 py-2 font-bold truncate max-w-[200px]" title={f.filename}>{f.filename}</td>
+                                    <td className="px-4 py-2 truncate max-w-[300px]" title={f.local_path}>{f.local_path}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -722,21 +882,18 @@
                         </div>
                       </div>
 
-                      <div className="rounded-3xl border border-red-200 bg-gradient-to-br from-red-50 to-white p-8 shadow-sm flex flex-col gap-4 md:col-span-2 relative overflow-hidden group">
-                        <div className="absolute -right-10 -bottom-10 opacity-5 group-hover:scale-110 transition-transform duration-500"><Icon name="alert-triangle" className="w-64 h-64 text-red-500"/></div>
-                        <div className="flex items-center gap-4 relative z-10">
-                           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-600 border border-red-200">
-                             <Icon name="alert-triangle" className="h-6 w-6" />
-                           </div>
-                           <h3 className="font-extrabold text-red-800 text-xl">Danger Zone</h3>
+                      <div className="brutal-panel p-6 border-red-500 bg-red-500/5 flex flex-col gap-4 md:col-span-2 relative overflow-hidden">
+                        <div className="flex items-center gap-3">
+                           <Icon name="alert-triangle" className="h-5 w-5 text-red-500" />
+                           <h3 className="font-bold text-red-500 text-sm">CRITICAL_OPERATIONS</h3>
                         </div>
-                        <p className="text-base text-red-700 leading-relaxed font-medium mt-2 max-w-4xl relative z-10">
-                          Need to test the downloader from scratch? You can factory reset the local database. 
-                          This deletes the index of what has been downloaded, but it <b className="font-extrabold bg-red-100 px-1 rounded">does not</b> delete your actual files on disk.
+                        <p className="text-xs text-textmuted leading-relaxed font-mono mt-2">
+                          Wipe internal SQLite database. Does not remove downloaded files from disk.
+                          <br/><span className="text-red-400 font-bold">> WARNING: IRREVERSIBLE ACTION.</span>
                         </p>
-                        <div className="mt-4 relative z-10">
-                          <button onClick={handleResetDatabase} className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 font-bold text-white shadow-md shadow-red-500/20 hover:bg-red-700 transition-all active:scale-95 hover:shadow-lg">
-                            <Icon name="trash-2" className="w-4 h-4"/> Factory Reset Database
+                        <div className="mt-4">
+                          <button onClick={handleResetDatabase} className="brutal-btn danger px-6 py-2 text-xs">
+                            <Icon name="trash-2" className="w-3 h-3"/> [ EXECUTE_PURGE ]
                           </button>
                         </div>
                       </div>
